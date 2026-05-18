@@ -1,5 +1,4 @@
 import {
-  AlertTriangle,
   BarChart3,
   ClipboardList,
   Home,
@@ -7,6 +6,7 @@ import {
   PlusCircle,
 } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import logoITT from '../assets/logo-itt.png'
 import { useAuth } from '../context/AuthContext'
 
 const linkBase =
@@ -25,8 +25,12 @@ export default function Sidebar() {
     <aside className="flex min-h-screen w-72 flex-col border-r border-slate-800 bg-slate-950 p-5 text-white">
       <div className="mb-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-slate-950">
-            <AlertTriangle size={26} />
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-md">
+            <img
+              src={logoITT}
+              alt="Logo Instituto Tecnológico de Toluca"
+              className="h-full w-full object-contain"
+            />
           </div>
 
           <div>
