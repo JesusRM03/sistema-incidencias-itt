@@ -1,55 +1,42 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState } from 'react'
+import {
+  ensureDemoData,
+  getUsuarioActualGuardado,
+  getUsuarios,
+  guardarUsuarioActual,
+  guardarUsuarios,
+  limpiarUsuarioActual,
+  normalizarUsuario,
+} from '../utils/storage'
 
 const AuthContext = createContext()
 
-const usuariosIniciales = [
-  {
-    id: 1,
-    nombre: 'Administrador ITT',
-    correo: 'admin@ittoluca.edu.mx',
-    password: 'admin123',
-    rol: 'Administrador',
-    identificador: 'ADM001',
-  },
-  {
-    id: 2,
-    nombre: 'Técnico de Mantenimiento',
-    correo: 'tecnico@ittoluca.edu.mx',
-    password: 'tecnico123',
-    rol: 'Técnico',
-    identificador: 'TEC001',
-  },
-  {
-    id: 3,
-    nombre: 'Alumno Demo',
-    correo: 'alumno@ittoluca.edu.mx',
-    password: 'alumno123',
-    rol: 'Alumno',
-    identificador: '23280182',
-  },
-]
-
 export function AuthProvider({ children }) {
-  const [usuario, setUsuario] = useState(null)
+  const [usuario, setUsuario] = useState(() => {
+    ensureDemoData()
 
-  useEffect(() => {
-    const usuariosGuardados = localStorage.getItem('usuariosITT')
-    const usuarioActual = localStorage.getItem('usuarioActualITT')
+    const usuarioActual = getUsuarioActualGuardado()
+    if (!usuarioActual) return null
 
-    if (!usuariosGuardados) {
-      localStorage.setItem('usuariosITT', JSON.stringify(usuariosIniciales))
+    const usuarios = getUsuarios()
+    const actualizado = usuarios.find((u) => u.correo === usuarioActual.correo)
+
+    if (actualizado) {
+      guardarUsuarioActual(actualizado)
+      return actualizado
     }
 
-    if (usuarioActual) {
-      setUsuario(JSON.parse(usuarioActual))
-    }
-  }, [])
+    guardarUsuarioActual(usuarioActual)
+    return usuarioActual
+  })
 
   const login = (correo, password) => {
-    const usuarios = JSON.parse(localStorage.getItem('usuariosITT')) || []
+    const correoNormalizado = correo.trim().toLowerCase()
+    const usuarios = getUsuarios()
 
     const encontrado = usuarios.find(
-      (u) => u.correo === correo && u.password === password
+      (u) => u.correo === correoNormalizado && u.password === password,
     )
 
     if (!encontrado) {
@@ -60,7 +47,7 @@ export function AuthProvider({ children }) {
     }
 
     setUsuario(encontrado)
-    localStorage.setItem('usuarioActualITT', JSON.stringify(encontrado))
+    guardarUsuarioActual(encontrado)
 
     return {
       ok: true,
@@ -69,9 +56,10 @@ export function AuthProvider({ children }) {
   }
 
   const registrar = (nuevoUsuario) => {
-    const usuarios = JSON.parse(localStorage.getItem('usuariosITT')) || []
+    const usuarios = getUsuarios()
+    const usuarioNormalizado = normalizarUsuario(nuevoUsuario)
 
-    const existe = usuarios.some((u) => u.correo === nuevoUsuario.correo)
+    const existe = usuarios.some((u) => u.correo === usuarioNormalizado.correo)
 
     if (existe) {
       return {
@@ -82,11 +70,10 @@ export function AuthProvider({ children }) {
 
     const usuarioCreado = {
       id: Date.now(),
-      ...nuevoUsuario,
+      ...usuarioNormalizado,
     }
 
-    const actualizados = [...usuarios, usuarioCreado]
-    localStorage.setItem('usuariosITT', JSON.stringify(actualizados))
+    guardarUsuarios([...usuarios, usuarioCreado])
 
     return {
       ok: true,
@@ -96,7 +83,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     setUsuario(null)
-    localStorage.removeItem('usuarioActualITT')
+    limpiarUsuarioActual()
   }
 
   return (

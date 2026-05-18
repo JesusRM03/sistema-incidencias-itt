@@ -3,6 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import logoITT from '../assets/logo-itt.png'
 import { useAuth } from '../context/AuthContext'
 
+const usuariosDemo = [
+  'admin@ittoluca.edu.mx / admin123',
+  'tecnico@ittoluca.edu.mx / tecnico123',
+  'alumno@ittoluca.edu.mx / alumno123',
+  'docente@ittoluca.edu.mx / docente123',
+]
+
 export default function Login() {
   const navigate = useNavigate()
   const { login } = useAuth()
@@ -25,11 +32,11 @@ export default function Login() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
-      <section className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl md:grid-cols-2">
-        <div className="bg-gradient-to-br from-emerald-500 via-cyan-600 to-blue-700 p-10 text-white">
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white sm:p-6">
+      <section className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl md:grid-cols-[1.05fr_0.95fr]">
+        <div className="bg-gradient-to-br from-emerald-500 via-sky-600 to-blue-800 p-8 text-white sm:p-10">
           <div className="flex items-center gap-4">
-            <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white p-2 shadow-lg">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white p-2 shadow-lg">
               <img
                 src={logoITT}
                 alt="Logo Instituto Tecnológico de Toluca"
@@ -41,7 +48,7 @@ export default function Login() {
               <p className="text-sm font-semibold uppercase tracking-widest">
                 Instituto Tecnológico de Toluca
               </p>
-              <p className="mt-1 text-sm text-white/80">
+              <p className="mt-1 text-sm text-white/85">
                 Ingeniería en Sistemas Computacionales
               </p>
             </div>
@@ -52,28 +59,23 @@ export default function Login() {
           </h1>
 
           <p className="mt-5 text-lg leading-relaxed text-white/85">
-            Prototipo funcional para registrar, consultar y dar seguimiento a
-            incidencias de infraestructura institucional.
+            Prototipo académico para registrar, consultar, asignar y dar
+            seguimiento a incidencias de infraestructura institucional.
           </p>
 
-          <div className="mt-8 rounded-2xl bg-white/10 p-5 text-sm backdrop-blur">
-            <p className="mb-2 font-semibold">Usuarios de prueba:</p>
-            <p>admin@ittoluca.edu.mx / admin123</p>
-            <p>tecnico@ittoluca.edu.mx / tecnico123</p>
-            <p>alumno@ittoluca.edu.mx / alumno123</p>
-          </div>
-
-          <div className="mt-8 rounded-2xl bg-slate-950/20 p-5 text-sm leading-relaxed">
-            <p className="font-semibold">Objetivo del prototipo</p>
-            <p className="mt-2 text-white/80">
-              Simular una herramienta web para reportar fallas en aulas,
-              laboratorios, sanitarios, instalaciones eléctricas, mobiliario y
-              equipo audiovisual dentro del ITT.
-            </p>
+          <div className="mt-8 rounded-2xl border border-white/20 bg-slate-950/20 p-5 text-sm backdrop-blur">
+            <p className="mb-3 font-semibold">Usuarios de prueba</p>
+            <div className="grid gap-2">
+              {usuariosDemo.map((usuario) => (
+                <p key={usuario} className="rounded-lg bg-white/10 px-3 py-2">
+                  {usuario}
+                </p>
+              ))}
+            </div>
           </div>
         </div>
 
-        <form onSubmit={enviar} className="p-10">
+        <form onSubmit={enviar} className="p-8 sm:p-10">
           <p className="text-sm font-semibold text-emerald-400">
             Acceso al sistema
           </p>
@@ -81,7 +83,7 @@ export default function Login() {
           <h2 className="mt-2 text-3xl font-bold">Iniciar sesión</h2>
 
           <p className="mt-2 text-slate-400">
-            Accede con tu correo institucional y contraseña.
+            Accede con un correo institucional registrado en el prototipo.
           </p>
 
           <label className="mt-8 block text-sm font-medium">
@@ -89,7 +91,8 @@ export default function Login() {
           </label>
 
           <input
-            type="email"
+            type="text"
+            inputMode="email"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
             className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-emerald-400"
@@ -126,7 +129,7 @@ export default function Login() {
           <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
             <p className="font-semibold text-white">Versión del sistema</p>
             <p className="mt-1">
-              Prototipo académico v0.1 con almacenamiento local del navegador.
+              Prototipo académico con almacenamiento local del navegador.
             </p>
           </div>
         </form>

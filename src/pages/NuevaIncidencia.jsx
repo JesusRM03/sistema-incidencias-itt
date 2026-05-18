@@ -1,57 +1,114 @@
-import { MapPin } from 'lucide-react'
+import { CheckCircle2, FileText, MapPin } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import mapaITT from '../assets/mapa-itt.jpg'
 import { useAuth } from '../context/AuthContext'
+import {
+  crearNotificaciones,
+  EDIFICIOS_ITT,
+  formatearFecha,
+  getCorreosAdministradores,
+  getIncidencias,
+  guardarIncidencias,
+  PRIORIDADES,
+  TIPOS_FALLA,
+} from '../utils/storage'
+
+const estadoInicial = {
+  tipo: '',
+  edificio: '',
+  aula: '',
+  descripcion: '',
+  prioridad: '',
+  evidencia: '',
+}
 
 export default function NuevaIncidencia() {
   const navigate = useNavigate()
   const { usuario } = useAuth()
 
-  const [formulario, setFormulario] = useState({
-    tipo: 'Proyector',
-    edificio: 'A',
-    aula: '',
-    descripcion: '',
-    prioridad: 'Media',
-  })
+  const [formulario, setFormulario] = useState(estadoInicial)
+  const [errores, setErrores] = useState({})
+  const [mensajeExito, setMensajeExito] = useState('')
 
   const cambiar = (e) => {
     setFormulario({
       ...formulario,
       [e.target.name]: e.target.value,
     })
+    setErrores({
+      ...errores,
+      [e.target.name]: '',
+    })
+  }
+
+  const validar = () => {
+    const nuevosErrores = {}
+
+    if (!formulario.tipo) nuevosErrores.tipo = 'Selecciona el tipo de falla.'
+    if (!formulario.prioridad) nuevosErrores.prioridad = 'Selecciona la prioridad.'
+    if (!formulario.edificio) nuevosErrores.edificio = 'Selecciona el edificio o área.'
+    if (!formulario.aula.trim()) {
+      nuevosErrores.aula = 'Indica el aula, laboratorio o punto específico.'
+    }
+    if (formulario.descripcion.trim().length < 10) {
+      nuevosErrores.descripcion = 'La descripción debe tener al menos 10 caracteres.'
+    }
+
+    setErrores(nuevosErrores)
+    return Object.keys(nuevosErrores).length === 0
   }
 
   const guardar = (e) => {
     e.preventDefault()
+    setMensajeExito('')
 
-    const incidencias = JSON.parse(localStorage.getItem('incidenciasITT')) || []
+    if (!validar()) return
+
+    const ahora = new Date()
+    const incidencias = getIncidencias()
 
     const nueva = {
       id: `INC-${Date.now()}`,
-      ...formulario,
+      tipo: formulario.tipo,
+      edificio: formulario.edificio,
+      aula: formulario.aula.trim(),
+      descripcion: formulario.descripcion.trim(),
+      prioridad: formulario.prioridad,
+      evidencia: formulario.evidencia.trim(),
       estado: 'Pendiente',
-      fecha: new Date().toLocaleString('es-MX'),
+      fecha: formatearFecha(ahora),
+      fechaISO: ahora.toISOString(),
       reportadoPor: usuario.correo,
       nombreReportante: usuario.nombre,
       tecnicoAsignado: '',
+      tecnicoCorreo: '',
       historial: [
         {
           estado: 'Pendiente',
           comentario: 'Incidencia registrada por el usuario.',
-          fecha: new Date().toLocaleString('es-MX'),
+          fecha: formatearFecha(ahora),
+          fechaISO: ahora.toISOString(),
           responsable: usuario.nombre,
         },
       ],
     }
 
-    localStorage.setItem(
-      'incidenciasITT',
-      JSON.stringify([nueva, ...incidencias])
-    )
+    guardarIncidencias([nueva, ...incidencias])
 
-    navigate('/mis-incidencias')
+    crearNotificaciones([usuario.correo, ...getCorreosAdministradores()], {
+      titulo: 'Nueva incidencia registrada',
+      mensaje: `${usuario.nombre} registró la incidencia ${nueva.id} en ${nueva.aula}.`,
+      incidenciaId: nueva.id,
+      tipo: 'registro',
+    })
+
+    setMensajeExito(`Incidencia ${nueva.id} registrada correctamente.`)
+    setFormulario(estadoInicial)
+
+    setTimeout(() => {
+      navigate('/mis-incidencias')
+    }, 1200)
   }
 
   return (
@@ -62,89 +119,53 @@ export default function NuevaIncidencia() {
 
       <h1 className="mt-2 text-3xl font-bold text-white">Nueva incidencia</h1>
 
-      <p className="mt-2 text-slate-400">
-        Captura la información principal de la falla encontrada en la
-        infraestructura del Instituto Tecnológico de Toluca.
+      <p className="mt-2 max-w-3xl text-slate-400">
+        Captura la falla con ubicación clara, prioridad y una descripción breve
+        pero suficiente para que mantenimiento pueda atenderla.
       </p>
 
-      <section className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      {mensajeExito && (
+        <div className="mt-6 flex items-center gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm font-semibold text-emerald-100">
+          <CheckCircle2 size={20} />
+          {mensajeExito}
+        </div>
+      )}
+
+      <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(340px,0.9fr)]">
         <form
           onSubmit={guardar}
-          className="grid gap-6 rounded-2xl border border-slate-800 bg-slate-900 p-6 lg:grid-cols-2"
+          className="grid gap-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/30 sm:p-6 lg:grid-cols-2"
         >
-          <div>
-            <label className="block text-sm font-medium text-white">
-              Tipo de falla
-            </label>
+          <CampoSelect
+            label="Tipo de falla"
+            name="tipo"
+            value={formulario.tipo}
+            onChange={cambiar}
+            error={errores.tipo}
+            placeholder="Selecciona una falla"
+            opciones={TIPOS_FALLA}
+          />
 
-            <select
-              name="tipo"
-              value={formulario.tipo}
-              onChange={cambiar}
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-            >
-              <option>Proyector</option>
-              <option>Mobiliario</option>
-              <option>Instalación eléctrica</option>
-              <option>Sanitarios</option>
-              <option>Aula o laboratorio</option>
-              <option>Otro</option>
-            </select>
-          </div>
+          <CampoSelect
+            label="Prioridad"
+            name="prioridad"
+            value={formulario.prioridad}
+            onChange={cambiar}
+            error={errores.prioridad}
+            placeholder="Selecciona prioridad"
+            opciones={PRIORIDADES}
+          />
 
-          <div>
-            <label className="block text-sm font-medium text-white">
-              Prioridad
-            </label>
-
-            <select
-              name="prioridad"
-              value={formulario.prioridad}
-              onChange={cambiar}
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-            >
-              <option>Baja</option>
-              <option>Media</option>
-              <option>Alta</option>
-              <option>Crítica</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white">
-              Edificio o área
-            </label>
-
-            <select
+          <div className="lg:col-span-2">
+            <CampoSelect
+              label="Edificio o área"
               name="edificio"
               value={formulario.edificio}
               onChange={cambiar}
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-            >
-              <option>A - Edificio administrativo</option>
-              <option>A1 - Sanitarios alumnos</option>
-              <option>B - Centro de información</option>
-              <option>B1 - Centro de cómputo</option>
-              <option>B2 - Aulas de ingeniería industrial</option>
-              <option>B3 - Posgrado e investigación</option>
-              <option>B4 - Laboratorio de ingeniería ambiental</option>
-              <option>B5 - Laboratorio de ingeniería ambiental</option>
-              <option>C - Unidad de apoyo tutorial</option>
-              <option>C1 - Centro académico y orientación educativa</option>
-              <option>C2 - División de estudios profesionales</option>
-              <option>C3 - Centro de enseñanza de lenguas extranjeras</option>
-              <option>D - Jefatura y cubículos de ingeniería química</option>
-              <option>D1 - Jefatura y laboratorio de ingeniería electrónica</option>
-              <option>D3 - Ingeniería mecatrónica</option>
-              <option>E - Estacionamiento</option>
-              <option>F - Aulas de sistemas computacionales</option>
-              <option>G - Sindicato</option>
-              <option>H - Cafetería</option>
-              <option>K - Gestión tecnológica y vinculación</option>
-              <option>T - Laboratorio de redes, gimnasio, auditorio y alberca</option>
-              <option>G1 - Gradas, vestidores y actividades extraescolares</option>
-              <option>G2 - Actividades extraescolares</option>
-            </select>
+              error={errores.edificio}
+              placeholder="Selecciona el edificio o área"
+              opciones={EDIFICIOS_ITT}
+            />
           </div>
 
           <div>
@@ -156,10 +177,36 @@ export default function NuevaIncidencia() {
               name="aula"
               value={formulario.aula}
               onChange={cambiar}
-              placeholder="Ej. Aula B-2, Laboratorio C-1, Sanitarios..."
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-              required
+              placeholder="Ej. Aula F-12, Laboratorio B1-03"
+              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
             />
+
+            {errores.aula && (
+              <p className="mt-2 text-sm text-red-300">{errores.aula}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white">
+              Evidencia simulada
+            </label>
+
+            <div className="mt-2 flex rounded-xl border border-slate-700 bg-slate-950 focus-within:border-emerald-400">
+              <span className="flex items-center px-4 text-slate-500">
+                <FileText size={18} />
+              </span>
+              <input
+                name="evidencia"
+                value={formulario.evidencia}
+                onChange={cambiar}
+                placeholder="Ej. Foto tomada, nota de evidencia..."
+                className="min-w-0 flex-1 rounded-xl bg-transparent py-3 pr-4 text-white outline-none placeholder:text-slate-600"
+              />
+            </div>
+
+            <p className="mt-2 text-xs text-slate-500">
+              No se sube archivo real; solo se registra una nota o nombre.
+            </p>
           </div>
 
           <div className="lg:col-span-2">
@@ -172,20 +219,23 @@ export default function NuevaIncidencia() {
               value={formulario.descripcion}
               onChange={cambiar}
               rows="5"
-              placeholder="Describe con claridad la falla encontrada..."
-              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-              required
+              placeholder="Describe con claridad qué falla, desde cuándo y si afecta una clase o servicio."
+              className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
             />
+
+            {errores.descripcion && (
+              <p className="mt-2 text-sm text-red-300">{errores.descripcion}</p>
+            )}
           </div>
 
           <div className="lg:col-span-2">
-            <button className="rounded-xl bg-emerald-500 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-400">
+            <button className="w-full rounded-xl bg-emerald-500 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-400 sm:w-auto">
               Registrar incidencia
             </button>
           </div>
         </form>
 
-        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <aside className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/30">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500 text-slate-950">
               <MapPin size={23} />
@@ -203,17 +253,41 @@ export default function NuevaIncidencia() {
             <img
               src={mapaITT}
               alt="Mapa de ubicación del Instituto Tecnológico de Toluca"
-              className="h-full w-full object-cover"
+              className="max-h-[580px] w-full object-cover"
             />
           </div>
 
-          <p className="mt-4 rounded-xl bg-slate-950 p-4 text-sm leading-relaxed text-slate-300">
-            Usa el mapa como apoyo para identificar el edificio, aula,
-            laboratorio o área donde se presenta la incidencia. Después
-            selecciona la ubicación en el formulario y escribe el punto exacto.
+          <p className="mt-4 rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm leading-relaxed text-slate-300">
+            Usa el mapa como apoyo para identificar edificio, aula, laboratorio
+            o área. El punto específico del formulario ayuda a que la atención
+            no dependa solo del nombre del edificio.
           </p>
         </aside>
       </section>
+    </div>
+  )
+}
+
+function CampoSelect({ label, name, value, onChange, error, placeholder, opciones }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-white">{label}</label>
+
+      <select
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-emerald-400"
+      >
+        <option value="">{placeholder}</option>
+        {opciones.map((opcion) => (
+          <option key={opcion} value={opcion}>
+            {opcion}
+          </option>
+        ))}
+      </select>
+
+      {error && <p className="mt-2 text-sm text-red-300">{error}</p>}
     </div>
   )
 }

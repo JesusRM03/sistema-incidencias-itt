@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { ROLES } from '../utils/storage'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -10,11 +11,12 @@ export default function Register() {
     nombre: '',
     correo: '',
     identificador: '',
-    rol: 'Alumno',
+    rol: ROLES.ALUMNO,
     password: '',
   })
 
   const [mensaje, setMensaje] = useState('')
+  const [ok, setOk] = useState(false)
 
   const cambiar = (e) => {
     setFormulario({
@@ -28,6 +30,7 @@ export default function Register() {
 
     const resultado = registrar(formulario)
     setMensaje(resultado.mensaje)
+    setOk(resultado.ok)
 
     if (resultado.ok) {
       setTimeout(() => {
@@ -37,7 +40,7 @@ export default function Register() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white sm:p-6">
       <form
         onSubmit={enviar}
         className="w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-900 p-8 shadow-2xl"
@@ -47,7 +50,8 @@ export default function Register() {
         </p>
         <h1 className="mt-2 text-3xl font-bold">Crear cuenta</h1>
         <p className="mt-2 text-slate-400">
-          Registra alumnos, docentes, técnicos o administradores.
+          Alta simulada de usuarios para probar permisos por rol dentro del
+          prototipo.
         </p>
 
         <label className="mt-6 block text-sm font-medium">Nombre completo</label>
@@ -89,10 +93,11 @@ export default function Register() {
           onChange={cambiar}
           className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-emerald-400"
         >
-          <option>Alumno</option>
-          <option>Docente</option>
-          <option>Técnico</option>
-          <option>Administrador</option>
+          {Object.values(ROLES).map((rol) => (
+            <option key={rol} value={rol}>
+              {rol}
+            </option>
+          ))}
         </select>
 
         <label className="mt-4 block text-sm font-medium">Contraseña</label>
@@ -106,7 +111,13 @@ export default function Register() {
         />
 
         {mensaje && (
-          <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-3 text-sm text-slate-200">
+          <div
+            className={`mt-5 rounded-xl border p-3 text-sm ${
+              ok
+                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100'
+                : 'border-red-400/30 bg-red-400/10 text-red-100'
+            }`}
+          >
             {mensaje}
           </div>
         )}

@@ -1,85 +1,58 @@
-import { useEffect, useState } from 'react'
+import { Eye, Search } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-
-const clasesEstado = {
-  Pendiente: 'bg-orange-500/10 text-orange-300 border-orange-700',
-  'En proceso': 'bg-blue-500/10 text-blue-300 border-blue-700',
-  'En revisión': 'bg-purple-500/10 text-purple-300 border-purple-700',
-  Resuelto: 'bg-emerald-500/10 text-emerald-300 border-emerald-700',
-  Cerrado: 'bg-slate-500/10 text-slate-300 border-slate-700',
-  Cancelado: 'bg-red-500/10 text-red-300 border-red-700',
-}
+import {
+  clasesEstado,
+  clasesPrioridad,
+  ESTADOS_INCIDENCIA,
+  getIncidencias,
+  getIncidenciasVisibles,
+  ordenarPorFechaDesc,
+} from '../utils/storage'
 
 export default function MisIncidencias() {
   const { usuario } = useAuth()
-  const [incidencias, setIncidencias] = useState([])
+  const [incidencias, setIncidencias] = useState(() => getIncidencias())
   const [filtro, setFiltro] = useState('Todas')
+  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => {
-    cargar()
+    const cargar = () => setIncidencias(getIncidencias())
+
+    window.addEventListener('itt-storage-updated', cargar)
+    return () => window.removeEventListener('itt-storage-updated', cargar)
   }, [])
 
-  const cargar = () => {
-    const datos = JSON.parse(localStorage.getItem('incidenciasITT')) || []
-    setIncidencias(datos)
-  }
+  const visibles = useMemo(
+    () => getIncidenciasVisibles(incidencias, usuario),
+    [incidencias, usuario],
+  )
 
-  const visibles =
-    usuario?.rol === 'Administrador'
-      ? incidencias
-      : usuario?.rol === 'Técnico'
-        ? incidencias.filter((i) => i.tecnicoAsignado === usuario.nombre)
-        : incidencias.filter((i) => i.reportadoPor === usuario?.correo)
+  const filtradas = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase()
+    const porEstado =
+      filtro === 'Todas' ? visibles : visibles.filter((i) => i.estado === filtro)
 
-  const filtradas =
-    filtro === 'Todas' ? visibles : visibles.filter((i) => i.estado === filtro)
+    const resultado = texto
+      ? porEstado.filter((incidencia) =>
+          [
+            incidencia.id,
+            incidencia.tipo,
+            incidencia.edificio,
+            incidencia.aula,
+            incidencia.descripcion,
+            incidencia.nombreReportante,
+            incidencia.tecnicoAsignado,
+          ]
+            .join(' ')
+            .toLowerCase()
+            .includes(texto),
+        )
+      : porEstado
 
-  const actualizarEstado = (id, nuevoEstado) => {
-    const actualizadas = incidencias.map((incidencia) => {
-      if (incidencia.id !== id) return incidencia
-
-      return {
-        ...incidencia,
-        estado: nuevoEstado,
-        historial: [
-          ...incidencia.historial,
-          {
-            estado: nuevoEstado,
-            comentario: `Estado actualizado a ${nuevoEstado}.`,
-            fecha: new Date().toLocaleString('es-MX'),
-            responsable: usuario.nombre,
-          },
-        ],
-      }
-    })
-
-    localStorage.setItem('incidenciasITT', JSON.stringify(actualizadas))
-    setIncidencias(actualizadas)
-  }
-
-  const asignarTecnico = (id) => {
-    const actualizadas = incidencias.map((incidencia) => {
-      if (incidencia.id !== id) return incidencia
-
-      return {
-        ...incidencia,
-        tecnicoAsignado: 'Técnico de Mantenimiento',
-        estado: 'En proceso',
-        historial: [
-          ...incidencia.historial,
-          {
-            estado: 'En proceso',
-            comentario: 'Administrador asignó la incidencia al técnico.',
-            fecha: new Date().toLocaleString('es-MX'),
-            responsable: usuario.nombre,
-          },
-        ],
-      }
-    })
-
-    localStorage.setItem('incidenciasITT', JSON.stringify(actualizadas))
-    setIncidencias(actualizadas)
-  }
+    return ordenarPorFechaDesc(resultado)
+  }, [busqueda, filtro, visibles])
 
   return (
     <div>
@@ -87,54 +60,67 @@ export default function MisIncidencias() {
         Seguimiento de incidencias
       </p>
 
-      <h1 className="mt-2 text-3xl font-bold text-white">Incidencias</h1>
+      <div className="mt-2 flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Incidencias</h1>
+          <p className="mt-2 max-w-3xl text-slate-400">
+            Consulta los reportes disponibles para tu rol. Haz clic en una
+            incidencia para ver su detalle, historial y acciones permitidas.
+          </p>
+        </div>
 
-      <p className="mt-2 text-slate-400">
-        Consulta los reportes registrados y revisa su estado de atención.
-      </p>
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        {[
-          'Todas',
-          'Pendiente',
-          'En proceso',
-          'En revisión',
-          'Resuelto',
-          'Cerrado',
-          'Cancelado',
-        ].map((estado) => (
-          <button
-            key={estado}
-            onClick={() => setFiltro(estado)}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              filtro === estado
-                ? 'bg-emerald-500 text-slate-950'
-                : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
-            }`}
-          >
-            {estado}
-          </button>
-        ))}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
+          {usuario?.rol === 'Administrador' && 'Vista administrativa: todas las incidencias'}
+          {usuario?.rol === 'Técnico' && 'Vista técnica: solo incidencias asignadas'}
+          {['Alumno', 'Docente'].includes(usuario?.rol) && 'Vista personal: solo tus reportes'}
+        </div>
       </div>
+
+      <section className="mt-6 grid gap-4 xl:grid-cols-[1fr_320px]">
+        <div className="flex flex-wrap gap-3">
+          {['Todas', ...ESTADOS_INCIDENCIA].map((estado) => (
+            <button
+              key={estado}
+              onClick={() => setFiltro(estado)}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                filtro === estado
+                  ? 'bg-emerald-500 text-slate-950'
+                  : 'border border-slate-800 bg-slate-900 text-slate-300 hover:border-emerald-400/50 hover:bg-slate-800'
+              }`}
+            >
+              {estado}
+            </button>
+          ))}
+        </div>
+
+        <label className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 focus-within:border-emerald-400">
+          <Search size={18} className="text-slate-500" />
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por ID, área o tipo..."
+            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+          />
+        </label>
+      </section>
 
       <section className="mt-8 grid gap-5">
         {filtradas.length === 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-300">
-            No hay incidencias para mostrar.
+          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-slate-300 shadow-lg shadow-slate-950/30">
+            No hay incidencias para mostrar con los filtros actuales.
           </div>
         )}
 
         {filtradas.map((incidencia) => (
-          <article
+          <Link
             key={incidencia.id}
-            className="rounded-2xl border border-slate-800 bg-slate-900 p-6"
+            to={`/incidencias/${encodeURIComponent(incidencia.id)}`}
+            className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/30 transition hover:border-emerald-400/50 hover:bg-slate-900/80 sm:p-6"
           >
-            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-              <div>
+            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+              <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h2 className="text-xl font-bold text-white">
-                    {incidencia.id}
-                  </h2>
+                  <h2 className="text-xl font-bold text-white">{incidencia.id}</h2>
 
                   <span
                     className={`rounded-full border px-3 py-1 text-xs font-bold ${
@@ -143,95 +129,48 @@ export default function MisIncidencias() {
                   >
                     {incidencia.estado}
                   </span>
+
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                      clasesPrioridad[incidencia.prioridad]
+                    }`}
+                  >
+                    {incidencia.prioridad}
+                  </span>
                 </div>
 
-                <p className="mt-3 text-slate-300">
-                  <strong>Tipo:</strong> {incidencia.tipo}
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {incidencia.tipo}
                 </p>
 
-                <p className="text-slate-300">
-                  <strong>Ubicación:</strong> Edificio {incidencia.edificio},{' '}
-                  {incidencia.aula}
+                <p className="mt-2 text-sm text-slate-300">
+                  {incidencia.edificio} · {incidencia.aula}
                 </p>
 
-                <p className="text-slate-300">
-                  <strong>Prioridad:</strong> {incidencia.prioridad}
-                </p>
-
-                <p className="text-slate-300">
-                  <strong>Fecha:</strong> {incidencia.fecha}
-                </p>
-
-                <p className="text-slate-300">
-                  <strong>Reportó:</strong> {incidencia.nombreReportante}
-                </p>
-
-                <p className="text-slate-300">
-                  <strong>Técnico asignado:</strong>{' '}
-                  {incidencia.tecnicoAsignado || 'Sin asignar'}
-                </p>
-
-                <p className="mt-4 rounded-xl bg-slate-950 p-4 text-slate-300">
+                <p className="mt-3 line-clamp-2 max-w-4xl text-sm leading-relaxed text-slate-400">
                   {incidencia.descripcion}
                 </p>
               </div>
 
-              <div className="flex min-w-60 flex-col gap-3">
-                {usuario?.rol === 'Administrador' && !incidencia.tecnicoAsignado && (
-                  <button
-                    onClick={() => asignarTecnico(incidencia.id)}
-                    className="rounded-xl bg-blue-500 px-4 py-3 font-bold text-white transition hover:bg-blue-400"
-                  >
-                    Asignar técnico
-                  </button>
-                )}
-
-                {(usuario?.rol === 'Administrador' ||
-                  usuario?.rol === 'Técnico') && (
-                  <select
-                    value={incidencia.estado}
-                    onChange={(e) =>
-                      actualizarEstado(incidencia.id, e.target.value)
-                    }
-                    className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
-                  >
-                    <option>Pendiente</option>
-                    <option>En proceso</option>
-                    <option>En revisión</option>
-                    <option>Resuelto</option>
-                    <option>Cerrado</option>
-                    <option>Cancelado</option>
-                  </select>
-                )}
+              <div className="grid gap-2 text-sm text-slate-300 lg:min-w-64">
+                <p>
+                  <span className="text-slate-500">Fecha:</span> {incidencia.fecha}
+                </p>
+                <p>
+                  <span className="text-slate-500">Reportó:</span>{' '}
+                  {incidencia.nombreReportante}
+                </p>
+                <p>
+                  <span className="text-slate-500">Técnico:</span>{' '}
+                  {incidencia.tecnicoAsignado || 'Sin asignar'}
+                </p>
+                <span className="mt-2 inline-flex w-fit items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950">
+                  <Eye size={17} />
+                  Ver detalle
+                </span>
               </div>
             </div>
-
-            <div className="mt-5 border-t border-slate-800 pt-5">
-              <h3 className="font-bold text-white">Historial</h3>
-
-              <div className="mt-3 grid gap-3">
-                {incidencia.historial.map((h, index) => (
-                  <div
-                    key={index}
-                    className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-300"
-                  >
-                    <p>
-                      <strong>Estado:</strong> {h.estado}
-                    </p>
-                    <p>
-                      <strong>Comentario:</strong> {h.comentario}
-                    </p>
-                    <p>
-                      <strong>Fecha:</strong> {h.fecha}
-                    </p>
-                    <p>
-                      <strong>Responsable:</strong> {h.responsable}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </article>
+          </Link>
         ))}
       </section>
     </div>
