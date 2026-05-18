@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useTheme } from '../context/ThemeContext'
 import {
   clasesEstado,
   contarPorCampo,
@@ -18,6 +19,7 @@ import {
 } from '../utils/storage'
 
 export default function Reportes() {
+  const { theme } = useTheme()
   const [incidencias, setIncidencias] = useState(() => getIncidencias())
 
   useEffect(() => {
@@ -54,90 +56,105 @@ export default function Reportes() {
       titulo: 'Total de incidencias',
       valor: resumen.total,
       icono: ClipboardList,
-      clase: 'bg-sky-400 text-slate-950',
+      estilo: { backgroundColor: 'var(--secondary)', color: 'var(--button-text)' },
     },
     {
       titulo: 'Pendientes',
       valor: resumen.pendientes,
       icono: Clock,
-      clase: 'bg-amber-400 text-slate-950',
+      estilo: { backgroundColor: 'var(--warning)', color: 'var(--button-text)' },
     },
     {
       titulo: 'En proceso',
       valor: resumen.proceso,
       icono: AlertTriangle,
-      clase: 'bg-blue-500 text-white',
+      estilo: { backgroundColor: 'var(--accent)', color: 'var(--button-text)' },
     },
     {
       titulo: 'Resueltas',
       valor: resumen.resueltas,
       icono: CheckCircle2,
-      clase: 'bg-emerald-500 text-slate-950',
+      estilo: { backgroundColor: 'var(--accent-strong)', color: 'var(--button-text)' },
     },
     {
       titulo: 'Canceladas',
       valor: resumen.canceladas,
       icono: XCircle,
-      clase: 'bg-red-500 text-white',
+      estilo: { backgroundColor: 'var(--danger)', color: '#ffffff' },
     },
   ]
 
   return (
     <div>
-      <p className="text-sm font-semibold text-emerald-400">
-        Reportes estadísticos
-      </p>
-      <h1 className="mt-2 text-3xl font-bold text-white">Reportes</h1>
-      <p className="mt-2 max-w-3xl text-slate-400">
-        Vista administrativa para analizar incidencias por estado, tipo de
-        falla, edificio o área y prioridad.
-      </p>
+      <p className="theme-kicker text-sm font-semibold">Reportes estadísticos</p>
+      <div className="mt-2 flex flex-col justify-between gap-3 xl:flex-row xl:items-end">
+        <div>
+          <h1 className="text-3xl font-bold">Reportes</h1>
+          <p className="theme-muted mt-2 max-w-3xl">
+            Vista administrativa para analizar incidencias por estado, tipo de
+            falla, edificio o área y prioridad.
+          </p>
+        </div>
+        <span className="theme-subtle w-fit rounded-full border px-3 py-1 text-xs font-bold">
+          Tema: {theme.nombre}
+        </span>
+      </div>
 
       <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         {tarjetas.map((tarjeta) => {
           const Icono = tarjeta.icono
 
           return (
-            <article
-              key={tarjeta.titulo}
-              className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg shadow-slate-950/30"
-            >
+            <article key={tarjeta.titulo} className="theme-card rounded-2xl border p-5">
               <div
-                className={`flex h-11 w-11 items-center justify-center rounded-xl ${tarjeta.clase}`}
+                className="flex h-11 w-11 items-center justify-center rounded-xl"
+                style={tarjeta.estilo}
               >
                 <Icono size={22} />
               </div>
-              <p className="mt-4 text-sm text-slate-400">{tarjeta.titulo}</p>
-              <p className="mt-1 text-3xl font-bold text-white">{tarjeta.valor}</p>
+              <p className="theme-muted mt-4 text-sm">{tarjeta.titulo}</p>
+              <p className="mt-1 text-3xl font-bold">{tarjeta.valor}</p>
             </article>
           )
         })}
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-2">
-        <Grafica titulo="Incidencias por estado" datos={datos.porEstado} color="#10b981" />
-        <Grafica titulo="Incidencias por tipo de falla" datos={datos.porTipo} color="#38bdf8" />
+        <Grafica
+          titulo="Incidencias por estado"
+          datos={datos.porEstado}
+          color={theme.chart.estado}
+          chart={theme.chart}
+        />
+        <Grafica
+          titulo="Incidencias por tipo de falla"
+          datos={datos.porTipo}
+          color={theme.chart.tipo}
+          chart={theme.chart}
+        />
         <Grafica
           titulo="Incidencias por edificio o área"
           datos={datos.porEdificio}
-          color="#f97316"
+          color={theme.chart.edificio}
+          chart={theme.chart}
         />
         <Grafica
           titulo="Incidencias por prioridad"
           datos={datos.porPrioridad}
-          color="#ef4444"
+          color={theme.chart.prioridad}
+          chart={theme.chart}
         />
       </section>
 
-      <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg shadow-slate-950/30">
-        <h2 className="text-xl font-bold text-white">Incidencias recientes</h2>
-        <p className="mt-2 text-sm text-slate-400">
+      <section className="theme-card mt-8 rounded-2xl border p-6">
+        <h2 className="text-xl font-bold">Incidencias recientes</h2>
+        <p className="theme-muted mt-2 text-sm">
           Últimos registros ordenados por fecha para revisión rápida.
         </p>
 
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-slate-800 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="border-b border-[var(--border)] text-xs uppercase tracking-wide text-[var(--muted)]">
               <tr>
                 <th className="py-3 pr-4">ID</th>
                 <th className="py-3 pr-4">Tipo</th>
@@ -147,10 +164,10 @@ export default function Reportes() {
                 <th className="py-3 pr-4">Fecha</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-[var(--border)]">
               {datos.recientes.map((incidencia) => (
-                <tr key={incidencia.id} className="text-slate-300">
-                  <td className="py-4 pr-4 font-semibold text-white">{incidencia.id}</td>
+                <tr key={incidencia.id} className="theme-soft-text">
+                  <td className="py-4 pr-4 font-semibold">{incidencia.id}</td>
                   <td className="py-4 pr-4">{incidencia.tipo}</td>
                   <td className="py-4 pr-4">
                     {incidencia.edificio} · {incidencia.aula}
@@ -176,23 +193,23 @@ export default function Reportes() {
   )
 }
 
-function Grafica({ titulo, datos, color }) {
+function Grafica({ titulo, datos, color, chart }) {
   return (
-    <article className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-lg shadow-slate-950/30">
-      <h2 className="text-xl font-bold text-white">{titulo}</h2>
+    <article className="theme-card rounded-2xl border p-6">
+      <h2 className="text-xl font-bold">{titulo}</h2>
 
       {datos.length === 0 ? (
-        <p className="mt-5 text-slate-400">No hay datos disponibles.</p>
+        <p className="theme-muted mt-5">No hay datos disponibles.</p>
       ) : (
         <div className="mt-6 h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={datos} margin={{ top: 10, right: 10, left: -10, bottom: 35 }}>
-              <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" />
+              <CartesianGrid stroke={chart.grid} strokeDasharray="3 3" />
               <XAxis
                 dataKey="nombre"
-                tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                tick={{ fill: chart.text, fontSize: 12 }}
                 tickLine={false}
-                axisLine={{ stroke: '#334155' }}
+                axisLine={{ stroke: chart.axis }}
                 interval={0}
                 angle={-15}
                 textAnchor="end"
@@ -202,19 +219,19 @@ function Grafica({ titulo, datos, color }) {
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fill: '#cbd5e1', fontSize: 12 }}
+                tick={{ fill: chart.text, fontSize: 12 }}
                 tickLine={false}
-                axisLine={{ stroke: '#334155' }}
+                axisLine={{ stroke: chart.axis }}
               />
               <Tooltip
-                cursor={{ fill: 'rgba(15, 23, 42, 0.65)' }}
+                cursor={{ fill: chart.cursor }}
                 contentStyle={{
-                  background: '#020617',
-                  border: '1px solid #334155',
+                  background: chart.tooltipBg,
+                  border: `1px solid ${chart.tooltipBorder}`,
                   borderRadius: '12px',
-                  color: '#f8fafc',
+                  color: chart.text,
                 }}
-                labelStyle={{ color: '#f8fafc' }}
+                labelStyle={{ color: chart.text }}
               />
               <Bar dataKey="total" fill={color} radius={[8, 8, 0, 0]} />
             </BarChart>

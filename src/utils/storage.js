@@ -34,6 +34,8 @@ export const TIPOS_FALLA = [
 
 export const PRIORIDADES = ['Baja', 'Media', 'Alta', 'Crítica']
 
+export const EDIFICIO_T = 'T - Edificio de Sistemas Computacionales y TICs'
+
 export const EDIFICIOS_ITT = [
   'A - Edificio administrativo',
   'A1 - Sanitarios alumnos',
@@ -55,7 +57,7 @@ export const EDIFICIOS_ITT = [
   'G - Sindicato',
   'H - Cafetería',
   'K - Gestión tecnológica y vinculación',
-  'T - Laboratorio de redes, gimnasio, auditorio y alberca',
+  EDIFICIO_T,
   'G1 - Gradas, vestidores y actividades extraescolares',
   'G2 - Actividades extraescolares',
 ]
@@ -285,7 +287,7 @@ function buildDemoIncidencias() {
       id: 'INC-DEMO-005',
       tipo: 'Red o conectividad',
       prioridad: 'Alta',
-      edificio: 'T - Laboratorio de redes, gimnasio, auditorio y alberca',
+      edificio: EDIFICIO_T,
       aula: 'Laboratorio de redes',
       descripcion:
         'La conexión de red es intermitente en las estaciones del laboratorio.',
@@ -480,6 +482,19 @@ function normalizarHistorial(item) {
   }
 }
 
+function normalizarEdificio(edificio) {
+  const valor = corregirTexto(edificio || 'Sin dato')
+
+  if (
+    valor.startsWith('T - Laboratorio de redes') ||
+    valor.startsWith('T - Edificio de Sistemas Computacionales')
+  ) {
+    return EDIFICIO_T
+  }
+
+  return valor
+}
+
 export function normalizarIncidencia(incidencia) {
   const usuarios = getUsuarios()
   const tecnico = usuarios.find((u) => u.nombre === corregirTexto(incidencia.tecnicoAsignado))
@@ -489,7 +504,7 @@ export function normalizarIncidencia(incidencia) {
     id: String(incidencia.id),
     tipo: corregirTexto(incidencia.tipo || 'Otro'),
     prioridad: corregirTexto(incidencia.prioridad || 'Media'),
-    edificio: corregirTexto(incidencia.edificio || 'Sin dato'),
+    edificio: normalizarEdificio(incidencia.edificio),
     aula: corregirTexto(incidencia.aula || 'Sin dato'),
     descripcion: corregirTexto(incidencia.descripcion || ''),
     evidencia: corregirTexto(incidencia.evidencia || ''),
@@ -649,6 +664,116 @@ export function ordenarPorFechaDesc(items) {
     const fechaB = Date.parse(b.fechaISO || b.fecha) || 0
     return fechaB - fechaA
   })
+}
+
+export function normalizarParaComparacion(texto = '') {
+  return String(texto)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function obtenerTokensClave(texto = '') {
+  const palabrasIgnoradas = new Set([
+    'con',
+    'del',
+    'desde',
+    'donde',
+    'el',
+    'en',
+    'la',
+    'las',
+    'los',
+    'para',
+    'por',
+    'que',
+    'se',
+    'sin',
+    'un',
+    'una',
+    'y',
+  ])
+
+  return normalizarParaComparacion(texto)
+    .split(' ')
+    .filter((palabra) => palabra.length > 2 && !palabrasIgnoradas.has(palabra))
+}
+
+function calcularSimilitudTexto(textoA = '', textoB = '') {
+  const tokensA = new Set(obtenerTokensClave(textoA))
+  const tokensB = new Set(obtenerTokensClave(textoB))
+
+  if (tokensA.size === 0 || tokensB.size === 0) return 0
+
+  const interseccion = [...tokensA].filter((token) => tokensB.has(token)).length
+  const base = Math.min(tokensA.size, tokensB.size)
+
+  return interseccion / base
+}
+
+function estaActiva(incidencia) {
+  return ['Pendiente', 'En proceso', 'En revisión'].includes(incidencia.estado)
+}
+
+function posibleCoincidenciaDuplicada(base, incidencia) {
+  const mismoTipo =
+    normalizarParaComparacion(base.tipo) === normalizarParaComparacion(incidencia.tipo)
+  const mismoEdificio =
+    normalizarParaComparacion(base.edificio) ===
+    normalizarParaComparacion(incidencia.edificio)
+  const mismaAula =
+    normalizarParaComparacion(base.aula) === normalizarParaComparacion(incidencia.aula)
+
+  if (!mismoTipo || !mismoEdificio) return false
+
+  const evidenciaBase = normalizarParaComparacion(base.evidencia)
+  const evidenciaIncidencia = normalizarParaComparacion(incidencia.evidencia)
+  const evidenciaIgual =
+    evidenciaBase.length >= 4 &&
+    evidenciaIncidencia.length >= 4 &&
+    evidenciaBase === evidenciaIncidencia
+
+  const descripcionParecida =
+    mismaAula &&
+    calcularSimilitudTexto(base.descripcion, incidencia.descripcion) >= 0.58
+
+  return evidenciaIgual || (mismaAula && descripcionParecida)
+}
+
+export function detectarIncidenciasDuplicadas(base, incidencias, opciones = {}) {
+  const { excluirId = '', incluirCerradas = false } = opciones
+
+  if (!base?.tipo || !base?.edificio || !base?.aula || !base?.descripcion) {
+    return []
+  }
+
+  return ordenarPorFechaDesc(incidencias).filter((incidencia) => {
+    if (incidencia.id === excluirId) return false
+    if (!incluirCerradas && !estaActiva(incidencia)) return false
+    return posibleCoincidenciaDuplicada(base, incidencia)
+  })
+}
+
+export function obtenerIdsDuplicadosRepetidos(incidencias) {
+  const repetidas = new Set()
+  const ordenadas = ordenarPorFechaDesc(incidencias)
+
+  ordenadas.forEach((incidencia, index) => {
+    if (repetidas.has(incidencia.id)) return
+
+    const duplicadas = ordenadas
+      .slice(index + 1)
+      .filter((candidata) => posibleCoincidenciaDuplicada(incidencia, candidata))
+
+    if (duplicadas.length === 0) return
+
+    duplicadas.forEach((duplicada) => repetidas.add(duplicada.id))
+  })
+
+  return [...repetidas]
 }
 
 export function crearNotificaciones(destinatarios, datos) {

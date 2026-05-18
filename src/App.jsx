@@ -1,10 +1,12 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import Sidebar from './components/Sidebar'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Administracion from './pages/Administracion'
 import Dashboard from './pages/Dashboard'
 import DetalleIncidencia from './pages/DetalleIncidencia'
 import Login from './pages/Login'
+import MapaITT from './pages/MapaITT'
 import MisIncidencias from './pages/MisIncidencias'
 import Notificaciones from './pages/Notificaciones'
 import NuevaIncidencia from './pages/NuevaIncidencia'
@@ -39,7 +41,7 @@ function RutaPorRol({ roles, children }) {
 function LayoutPrivado({ children }) {
   return (
     <RutaPrivada>
-      <div className="min-h-screen bg-slate-950 text-white lg:flex">
+      <div className="theme-app min-h-screen lg:flex">
         <Sidebar />
 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
@@ -86,6 +88,15 @@ function AppRoutes() {
           element={
             <LayoutPrivado>
               <MisIncidencias />
+            </LayoutPrivado>
+          }
+        />
+
+        <Route
+          path="/mapa"
+          element={
+            <LayoutPrivado>
+              <MapaITT />
             </LayoutPrivado>
           }
         />
@@ -138,8 +149,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }

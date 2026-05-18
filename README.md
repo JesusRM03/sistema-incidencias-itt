@@ -42,6 +42,20 @@ npm run lint
 | Alumno | alumno@ittoluca.edu.mx | alumno123 |
 | Docente | docente@ittoluca.edu.mx | docente123 |
 
+## Temas visuales
+
+El sistema incluye un selector de tema en el Sidebar, disponible para todos los usuarios. El tema activo se guarda en `localStorage` con la llave `temaVisualITT`, por lo que se conserva al recargar el navegador.
+
+Temas disponibles:
+
+- Institucional oscuro
+- Institucional claro
+- Naranja, blanco y azul
+- Azul académico
+- Alto contraste
+
+Los temas modifican fondo, tarjetas, bordes, botones, textos destacados, acentos y colores de gráficas en Reportes.
+
 ## Funcionalidades implementadas
 
 - Inicio de sesión y registro de usuarios simulados.
@@ -57,7 +71,10 @@ npm run lint
 - Reportes administrativos con tarjetas resumen, gráficas y tabla de incidencias recientes.
 - Panel de administración con usuarios registrados, conteo por rol, limpieza de datos y reinicio demo.
 - Datos demo iniciales sin duplicarse al recargar.
-- Diseño oscuro moderno con colores institucionales, logo ITT y mapa del Instituto Tecnológico de Toluca.
+- Selector de temas persistente.
+- Mapa institucional visible completo con opción de ampliarlo.
+- Pantalla Mapa ITT disponible para Alumno, Docente, Técnico y Administrador.
+- Edificio T aclarado como: T - Edificio de Sistemas Computacionales y TICs.
 
 ## Estados de incidencia
 
@@ -73,13 +90,17 @@ El Técnico sigue transiciones controladas para evitar cambios ilógicos. El Adm
 ## Pruebas manuales sugeridas
 
 1. Login: inicia sesión con cada usuario de prueba y confirma que el sidebar cambia según el rol.
-2. Registro de incidencia: entra como Alumno o Docente, abre Nueva incidencia, completa el formulario y verifica el mensaje de éxito.
-3. Asignación de técnico: entra como Administrador, abre una incidencia pendiente y asigna el técnico.
-4. Cambio de estado: entra como Técnico, abre una incidencia asignada, selecciona un estado permitido y agrega comentario.
-5. Notificaciones: revisa la pantalla Notificaciones y marca avisos como leídos.
-6. Reportes: entra como Administrador y valida tarjetas, gráficas por estado/tipo/edificio/prioridad y tabla reciente.
-7. Validación de roles: intenta acceder como Alumno o Técnico a `/reportes` o `/administracion`; el sistema debe regresar al Dashboard.
-8. Limpieza demo: entra como Administrador, abre Administración, usa Limpiar incidencias y Reiniciar datos demo confirmando los diálogos.
+2. Cambio de tema: desde el Sidebar cambia entre los cinco temas, recarga la página y confirma que el tema se conserva.
+3. Registro de incidencia: entra como Alumno o Docente, abre Nueva incidencia, completa el formulario y verifica el mensaje de éxito.
+4. Mapa completo: en Nueva incidencia, confirma que el mapa no está recortado y usa Ampliar mapa para abrir/cerrar el modal.
+5. Mapa por rol: entra como Administrador o Técnico y abre Mapa ITT desde el Sidebar.
+6. Edificio T: abre el dropdown de edificios y confirma que aparece “T - Edificio de Sistemas Computacionales y TICs”.
+7. Asignación de técnico: entra como Administrador, abre una incidencia pendiente y asigna el técnico.
+8. Cambio de estado: entra como Técnico, abre una incidencia asignada, selecciona un estado permitido y agrega comentario.
+9. Notificaciones: revisa la pantalla Notificaciones y marca avisos como leídos.
+10. Reportes: entra como Administrador y valida tarjetas, gráficas por estado/tipo/edificio/prioridad y tabla reciente en distintos temas.
+11. Validación de roles: intenta acceder como Alumno o Técnico a `/reportes` o `/administracion`; el sistema debe regresar al Dashboard.
+12. Limpieza demo: entra como Administrador, abre Administración, usa Limpiar incidencias y Reiniciar datos demo confirmando los diálogos.
 
 ## Notas académicas
 
