@@ -1,25 +1,39 @@
 {
   "name": "sistema-incidencias-itt",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "node --env-file=.env server/index.js",
+    "db:migrate": "node --env-file=.env scripts/migrate.js",
+    "db:bootstrap": "node --env-file=.env scripts/bootstrap.js",
+    "db:demo": "node --env-file=.env scripts/demo.js",
+    "test": "node --test tests/*.test.js",
+    "test:integration": "node --env-file=.env --test tests/integration/*.test.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.3.0",
+    "argon2": "^0.45.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.16.0",
+    "mysql2": "^3.24.6",
+    "qrcode": "^1.5.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1",
-    "recharts": "^3.8.1",
-    "tailwindcss": "^4.3.0"
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -27,6 +41,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "prettier": "^3.9.10",
     "vite": "^8.0.12"
   }
 }

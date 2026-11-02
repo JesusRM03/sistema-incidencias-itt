@@ -1,0 +1,262 @@
+TAP version 13
+# Subtest: Base relacional contiene las 19 tablas
+ok 1 - Base relacional contiene las 19 tablas
+  ---
+  duration_ms: 609.108127
+  type: 'test'
+  ...
+# Subtest: RF-10 sin sesión rechaza catálogo
+ok 2 - RF-10 sin sesión rechaza catálogo
+  ---
+  duration_ms: 5.937237
+  type: 'test'
+  ...
+# Subtest: RF-10 reportante no administra cuentas
+ok 3 - RF-10 reportante no administra cuentas
+  ---
+  duration_ms: 12.931181
+  type: 'test'
+  ...
+# Subtest: CSRF rechaza escritura de origen ajeno
+ok 4 - CSRF rechaza escritura de origen ajeno
+  ---
+  duration_ms: 3.142315
+  type: 'test'
+  ...
+# Subtest: CSRF rechaza token incorrecto
+ok 5 - CSRF rechaza token incorrecto
+  ---
+  duration_ms: 5.994118
+  type: 'test'
+  ...
+# Subtest: RF-04 descripción menor de 20 rechazada
+ok 6 - RF-04 descripción menor de 20 rechazada
+  ---
+  duration_ms: 6.447468
+  type: 'test'
+  ...
+# Subtest: RF-16 carga de imagen real y alta con periodo
+ok 7 - RF-16 carga de imagen real y alta con periodo
+  ---
+  duration_ms: 52.697638
+  type: 'test'
+  ...
+# Subtest: RF-29 reintento devuelve mismo ID
+ok 8 - RF-29 reintento devuelve mismo ID
+  ---
+  duration_ms: 9.921379
+  type: 'test'
+  ...
+# Subtest: RF-29 misma clave y otro contenido genera conflicto
+ok 9 - RF-29 misma clave y otro contenido genera conflicto
+  ---
+  duration_ms: 7.079501
+  type: 'test'
+  ...
+# Subtest: RF-17 duplicado exige explicación sin revelar identidad
+ok 10 - RF-17 duplicado exige explicación sin revelar identidad
+  ---
+  duration_ms: 8.742807
+  type: 'test'
+  ...
+# Subtest: RF-05 reportante ajeno no ve detalle
+ok 11 - RF-05 reportante ajeno no ve detalle
+  ---
+  duration_ms: 4.897012
+  type: 'test'
+  ...
+# Subtest: RF-05 técnico no asignado no ve detalle
+ok 12 - RF-05 técnico no asignado no ve detalle
+  ---
+  duration_ms: 6.907472
+  type: 'test'
+  ...
+# Subtest: RNF-12 descarga ajena de fotografía rechazada
+ok 13 - RNF-12 descarga ajena de fotografía rechazada
+  ---
+  duration_ms: 24.777383
+  type: 'test'
+  ...
+# Subtest: RF-16 imagen corrupta no guarda incidencia
+ok 14 - RF-16 imagen corrupta no guarda incidencia
+  ---
+  duration_ms: 25.821601
+  type: 'test'
+  ...
+# Subtest: RF-07 primera asignación inicia atención
+ok 15 - RF-07 primera asignación inicia atención
+  ---
+  duration_ms: 54.227448
+  type: 'test'
+  ...
+# Subtest: RNF-11 versión antigua impide sobrescritura
+ok 16 - RNF-11 versión antigua impide sobrescritura
+  ---
+  duration_ms: 8.102678
+  type: 'test'
+  ...
+# Subtest: RF-25 no desactiva técnico con tareas
+ok 17 - RF-25 no desactiva técnico con tareas
+  ---
+  duration_ms: 13.292211
+  type: 'test'
+  ...
+# Subtest: RF-19 nota interna guardada y oculta al reportante
+ok 18 - RF-19 nota interna guardada y oculta al reportante
+  ---
+  duration_ms: 43.686988
+  type: 'test'
+  ...
+# Subtest: RF-18 técnico no puede priorizar
+ok 19 - RF-18 técnico no puede priorizar
+  ---
+  duration_ms: 18.683459
+  type: 'test'
+  ...
+# Subtest: RF-20 técnico envía solución a revisión
+ok 20 - RF-20 técnico envía solución a revisión
+  ---
+  duration_ms: 25.128337
+  type: 'test'
+  ...
+# Subtest: RF-20 técnico no aprueba su solución
+ok 21 - RF-20 técnico no aprueba su solución
+  ---
+  duration_ms: 11.766614
+  type: 'test'
+  ...
+# Subtest: RF-20 administrador aprueba solución de otra persona
+ok 22 - RF-20 administrador aprueba solución de otra persona
+  ---
+  duration_ms: 19.484428
+  type: 'test'
+  ...
+# Subtest: RF-21 técnico no cierra por su rol
+ok 23 - RF-21 técnico no cierra por su rol
+  ---
+  duration_ms: 11.941544
+  type: 'test'
+  ...
+# Subtest: RF-22 inconformidad limpia aprobación y reabre
+ok 24 - RF-22 inconformidad limpia aprobación y reabre
+  ---
+  duration_ms: 27.492084
+  type: 'test'
+  ...
+# Subtest: RF-20 aprobación propia administrativa bloqueada
+ok 25 - RF-20 aprobación propia administrativa bloqueada
+  ---
+  duration_ms: 39.956988
+  type: 'test'
+  ...
+# Subtest: RF-21 reportante confirma cierre
+ok 26 - RF-21 reportante confirma cierre
+  ---
+  duration_ms: 20.427383
+  type: 'test'
+  ...
+# Subtest: RD-09 cerrado terminal no permite cancelación
+ok 27 - RD-09 cerrado terminal no permite cancelación
+  ---
+  duration_ms: 10.283386
+  type: 'test'
+  ...
+# Subtest: RF-26 periodos superpuestos rechazados
+ok 28 - RF-26 periodos superpuestos rechazados
+  ---
+  duration_ms: 6.721147
+  type: 'test'
+  ...
+# Subtest: RF-13 baja de edificio con espacios activos rechazada
+ok 29 - RF-13 baja de edificio con espacios activos rechazada
+  ---
+  duration_ms: 6.507223
+  type: 'test'
+  ...
+# Subtest: RF-28 etiqueta QR sin identidad
+ok 30 - RF-28 etiqueta QR sin identidad
+  ---
+  duration_ms: 67.4389
+  type: 'test'
+  ...
+# Subtest: RF-28 renovación invalida QR anterior
+ok 31 - RF-28 renovación invalida QR anterior
+  ---
+  duration_ms: 39.549597
+  type: 'test'
+  ...
+# Subtest: RF-12 filtros se intersectan y conservan paginación
+ok 32 - RF-12 filtros se intersectan y conservan paginación
+  ---
+  duration_ms: 7.275594
+  type: 'test'
+  ...
+# Subtest: RF-12 fechas invertidas rechazadas
+ok 33 - RF-12 fechas invertidas rechazadas
+  ---
+  duration_ms: 3.807651
+  type: 'test'
+  ...
+# Subtest: RF-24 CSV y panel comparten registros y columnas
+ok 34 - RF-24 CSV y panel comparten registros y columnas
+  ---
+  duration_ms: 28.356176
+  type: 'test'
+  ...
+# Subtest: RF-11 lectura individual no modifica aviso ajeno
+ok 35 - RF-11 lectura individual no modifica aviso ajeno
+  ---
+  duration_ms: 21.495383
+  type: 'test'
+  ...
+# Subtest: RF-01 alta administrativa entrega credencial temporal
+ok 36 - RF-01 alta administrativa entrega credencial temporal
+  ---
+  duration_ms: 13.059398
+  type: 'test'
+  ...
+# Subtest: RF-01 correo duplicado rechazado
+ok 37 - RF-01 correo duplicado rechazado
+  ---
+  duration_ms: 6.916719
+  type: 'test'
+  ...
+# Subtest: RF-27 canje con CAPTCHA activa cuenta y no permite segundo uso
+ok 38 - RF-27 canje con CAPTCHA activa cuenta y no permite segundo uso
+  ---
+  duration_ms: 632.85032
+  type: 'test'
+  ...
+# Subtest: RNF-04 inactividad de 30 minutos revoca acceso
+ok 39 - RNF-04 inactividad de 30 minutos revoca acceso
+  ---
+  duration_ms: 151.838331
+  type: 'test'
+  ...
+# Subtest: RF-03 cerrar sesión impide reutilización
+ok 40 - RF-03 cerrar sesión impide reutilización
+  ---
+  duration_ms: 101.55764
+  type: 'test'
+  ...
+# Subtest: RNF-05 auditoría no contiene hashes ni secretos
+ok 41 - RNF-05 auditoría no contiene hashes ni secretos
+  ---
+  duration_ms: 4.509083
+  type: 'test'
+  ...
+# Subtest: RF-30 vincula duplicado mediante el folio visible y conserva ambos registros
+ok 42 - RF-30 vincula duplicado mediante el folio visible y conserva ambos registros
+  ---
+  duration_ms: 27.824817
+  type: 'test'
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2654.177209
