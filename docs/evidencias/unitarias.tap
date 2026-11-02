@@ -1,0 +1,436 @@
+TAP version 13
+# Subtest: PF-06 Pendiente → En proceso
+ok 1 - PF-06 Pendiente → En proceso
+  ---
+  duration_ms: 7.229276
+  type: 'test'
+  ...
+# Subtest: PF-06 Pendiente → En revisión
+ok 2 - PF-06 Pendiente → En revisión
+  ---
+  duration_ms: 5.083037
+  type: 'test'
+  ...
+# Subtest: PF-06 Pendiente → Resuelto
+ok 3 - PF-06 Pendiente → Resuelto
+  ---
+  duration_ms: 0.989978
+  type: 'test'
+  ...
+# Subtest: PF-06 Pendiente → Cerrado
+ok 4 - PF-06 Pendiente → Cerrado
+  ---
+  duration_ms: 0.140292
+  type: 'test'
+  ...
+# Subtest: PF-06 Pendiente → Cancelado
+ok 5 - PF-06 Pendiente → Cancelado
+  ---
+  duration_ms: 0.934501
+  type: 'test'
+  ...
+# Subtest: PF-06 En proceso → Pendiente
+ok 6 - PF-06 En proceso → Pendiente
+  ---
+  duration_ms: 0.114481
+  type: 'test'
+  ...
+# Subtest: PF-06 En proceso → En revisión
+ok 7 - PF-06 En proceso → En revisión
+  ---
+  duration_ms: 0.122136
+  type: 'test'
+  ...
+# Subtest: PF-06 En proceso → Resuelto
+ok 8 - PF-06 En proceso → Resuelto
+  ---
+  duration_ms: 0.115834
+  type: 'test'
+  ...
+# Subtest: PF-06 En proceso → Cerrado
+ok 9 - PF-06 En proceso → Cerrado
+  ---
+  duration_ms: 0.397019
+  type: 'test'
+  ...
+# Subtest: PF-06 En proceso → Cancelado
+ok 10 - PF-06 En proceso → Cancelado
+  ---
+  duration_ms: 0.2116
+  type: 'test'
+  ...
+# Subtest: PF-06 En revisión → Pendiente
+ok 11 - PF-06 En revisión → Pendiente
+  ---
+  duration_ms: 0.10635
+  type: 'test'
+  ...
+# Subtest: PF-06 En revisión → En proceso
+ok 12 - PF-06 En revisión → En proceso
+  ---
+  duration_ms: 1.083253
+  type: 'test'
+  ...
+# Subtest: PF-06 En revisión → Resuelto
+ok 13 - PF-06 En revisión → Resuelto
+  ---
+  duration_ms: 0.071166
+  type: 'test'
+  ...
+# Subtest: PF-06 En revisión → Cerrado
+ok 14 - PF-06 En revisión → Cerrado
+  ---
+  duration_ms: 0.895146
+  type: 'test'
+  ...
+# Subtest: PF-06 En revisión → Cancelado
+ok 15 - PF-06 En revisión → Cancelado
+  ---
+  duration_ms: 0.783251
+  type: 'test'
+  ...
+# Subtest: PF-06 Resuelto → Pendiente
+ok 16 - PF-06 Resuelto → Pendiente
+  ---
+  duration_ms: 0.41418
+  type: 'test'
+  ...
+# Subtest: PF-06 Resuelto → En proceso
+ok 17 - PF-06 Resuelto → En proceso
+  ---
+  duration_ms: 0.056971
+  type: 'test'
+  ...
+# Subtest: PF-06 Resuelto → En revisión
+ok 18 - PF-06 Resuelto → En revisión
+  ---
+  duration_ms: 0.049659
+  type: 'test'
+  ...
+# Subtest: PF-06 Resuelto → Cerrado
+ok 19 - PF-06 Resuelto → Cerrado
+  ---
+  duration_ms: 0.029918
+  type: 'test'
+  ...
+# Subtest: PF-06 Resuelto → Cancelado
+ok 20 - PF-06 Resuelto → Cancelado
+  ---
+  duration_ms: 0.040909
+  type: 'test'
+  ...
+# Subtest: PF-06 Cerrado → Pendiente
+ok 21 - PF-06 Cerrado → Pendiente
+  ---
+  duration_ms: 0.064948
+  type: 'test'
+  ...
+# Subtest: PF-06 Cerrado → En proceso
+ok 22 - PF-06 Cerrado → En proceso
+  ---
+  duration_ms: 0.050907
+  type: 'test'
+  ...
+# Subtest: PF-06 Cerrado → En revisión
+ok 23 - PF-06 Cerrado → En revisión
+  ---
+  duration_ms: 0.621031
+  type: 'test'
+  ...
+# Subtest: PF-06 Cerrado → Resuelto
+ok 24 - PF-06 Cerrado → Resuelto
+  ---
+  duration_ms: 0.849193
+  type: 'test'
+  ...
+# Subtest: PF-06 Cerrado → Cancelado
+ok 25 - PF-06 Cerrado → Cancelado
+  ---
+  duration_ms: 0.06692
+  type: 'test'
+  ...
+# Subtest: PF-06 Cancelado → Pendiente
+ok 26 - PF-06 Cancelado → Pendiente
+  ---
+  duration_ms: 0.085539
+  type: 'test'
+  ...
+# Subtest: PF-06 Cancelado → En proceso
+ok 27 - PF-06 Cancelado → En proceso
+  ---
+  duration_ms: 0.051176
+  type: 'test'
+  ...
+# Subtest: PF-06 Cancelado → En revisión
+ok 28 - PF-06 Cancelado → En revisión
+  ---
+  duration_ms: 0.043988
+  type: 'test'
+  ...
+# Subtest: PF-06 Cancelado → Resuelto
+ok 29 - PF-06 Cancelado → Resuelto
+  ---
+  duration_ms: 0.413408
+  type: 'test'
+  ...
+# Subtest: PF-06 Cancelado → Cerrado
+ok 30 - PF-06 Cancelado → Cerrado
+  ---
+  duration_ms: 0.123772
+  type: 'test'
+  ...
+# Subtest: PF-04 descripción de 0 caracteres
+ok 31 - PF-04 descripción de 0 caracteres
+  ---
+  duration_ms: 0.214799
+  type: 'test'
+  ...
+# Subtest: PF-04 descripción de 1 caracteres
+ok 32 - PF-04 descripción de 1 caracteres
+  ---
+  duration_ms: 0.061038
+  type: 'test'
+  ...
+# Subtest: PF-04 descripción de 19 caracteres
+ok 33 - PF-04 descripción de 19 caracteres
+  ---
+  duration_ms: 0.046578
+  type: 'test'
+  ...
+# Subtest: PF-04 descripción de 20 caracteres
+ok 34 - PF-04 descripción de 20 caracteres
+  ---
+  duration_ms: 0.088391
+  type: 'test'
+  ...
+# Subtest: PF-04 descripción de 2000 caracteres
+ok 35 - PF-04 descripción de 2000 caracteres
+  ---
+  duration_ms: 0.067663
+  type: 'test'
+  ...
+# Subtest: PF-04 descripción de 2001 caracteres
+ok 36 - PF-04 descripción de 2001 caracteres
+  ---
+  duration_ms: 0.048901
+  type: 'test'
+  ...
+# Subtest: Identificador rechaza 0
+ok 37 - Identificador rechaza 0
+  ---
+  duration_ms: 0.171262
+  type: 'test'
+  ...
+# Subtest: Identificador rechaza -1
+ok 38 - Identificador rechaza -1
+  ---
+  duration_ms: 0.146329
+  type: 'test'
+  ...
+# Subtest: Identificador rechaza 1 OR 1=1
+ok 39 - Identificador rechaza 1 OR 1=1
+  ---
+  duration_ms: 0.077569
+  type: 'test'
+  ...
+# Subtest: Identificador rechaza 1.1
+ok 40 - Identificador rechaza 1.1
+  ---
+  duration_ms: 0.102886
+  type: 'test'
+  ...
+# Subtest: Identificador rechaza 9007199254740992
+ok 41 - Identificador rechaza 9007199254740992
+  ---
+  duration_ms: 0.115404
+  type: 'test'
+  ...
+# Subtest: Identificador rechaza abc
+ok 42 - Identificador rechaza abc
+  ---
+  duration_ms: 0.105831
+  type: 'test'
+  ...
+# Subtest: Identificador válido
+ok 43 - Identificador válido
+  ---
+  duration_ms: 0.179343
+  type: 'test'
+  ...
+# Subtest: PF-01 alta válida normaliza el correo
+ok 44 - PF-01 alta válida normaliza el correo
+  ---
+  duration_ms: 0.339678
+  type: 'test'
+  ...
+# Subtest: PD-03 rechaza control 1234567
+ok 45 - PD-03 rechaza control 1234567
+  ---
+  duration_ms: 0.201566
+  type: 'test'
+  ...
+# Subtest: PD-03 rechaza control 123456789
+ok 46 - PD-03 rechaza control 123456789
+  ---
+  duration_ms: 0.07364
+  type: 'test'
+  ...
+# Subtest: PD-03 rechaza control ABCDEFGH
+ok 47 - PD-03 rechaza control ABCDEFGH
+  ---
+  duration_ms: 0.04565
+  type: 'test'
+  ...
+# Subtest: Correo institucional rechaza ana@gmail.com
+ok 48 - Correo institucional rechaza ana@gmail.com
+  ---
+  duration_ms: 0.067008
+  type: 'test'
+  ...
+# Subtest: Correo institucional rechaza ana@ittoluca.edu.mx
+ok 49 - Correo institucional rechaza ana@ittoluca.edu.mx
+  ---
+  duration_ms: 2.285697
+  type: 'test'
+  ...
+# Subtest: Correo institucional rechaza ana@@toluca.tecnm.mx
+ok 50 - Correo institucional rechaza ana@@toluca.tecnm.mx
+  ---
+  duration_ms: 0.103353
+  type: 'test'
+  ...
+# Subtest: Rol inválido 0
+ok 51 - Rol inválido 0
+  ---
+  duration_ms: 0.153631
+  type: 'test'
+  ...
+# Subtest: Rol inválido 4
+ok 52 - Rol inválido 4
+  ---
+  duration_ms: 0.05251
+  type: 'test'
+  ...
+# Subtest: Rol inválido 99
+ok 53 - Rol inválido 99
+  ---
+  duration_ms: 0.038824
+  type: 'test'
+  ...
+# Subtest: Seguridad rechaza contraseña corta
+ok 54 - Seguridad rechaza contraseña corta
+  ---
+  duration_ms: 0.093799
+  type: 'test'
+  ...
+# Subtest: Seguridad rechaza contraseña solominusculas123
+ok 55 - Seguridad rechaza contraseña solominusculas123
+  ---
+  duration_ms: 0.092618
+  type: 'test'
+  ...
+# Subtest: Seguridad rechaza contraseña SOLOMAYUSCULAS123
+ok 56 - Seguridad rechaza contraseña SOLOMAYUSCULAS123
+  ---
+  duration_ms: 0.069415
+  type: 'test'
+  ...
+# Subtest: Seguridad rechaza contraseña SinNumerosLargos
+ok 57 - Seguridad rechaza contraseña SinNumerosLargos
+  ---
+  duration_ms: 0.063791
+  type: 'test'
+  ...
+# Subtest: Contraseña válida
+ok 58 - Contraseña válida
+  ---
+  duration_ms: 0.063604
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "=1+1"
+ok 59 - PF-24 neutraliza fórmula "=1+1"
+  ---
+  duration_ms: 0.237292
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "+SUM(A1)"
+ok 60 - PF-24 neutraliza fórmula "+SUM(A1)"
+  ---
+  duration_ms: 0.041381
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "-1"
+ok 61 - PF-24 neutraliza fórmula "-1"
+  ---
+  duration_ms: 0.027105
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "@cmd"
+ok 62 - PF-24 neutraliza fórmula "@cmd"
+  ---
+  duration_ms: 0.063975
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "\\t=1"
+ok 63 - PF-24 neutraliza fórmula "\\t=1"
+  ---
+  duration_ms: 0.142931
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "\\r+1"
+ok 64 - PF-24 neutraliza fórmula "\\r+1"
+  ---
+  duration_ms: 0.439593
+  type: 'test'
+  ...
+# Subtest: PF-24 neutraliza fórmula "\\u0000=1"
+ok 65 - PF-24 neutraliza fórmula "\\u0000=1"
+  ---
+  duration_ms: 0.058268
+  type: 'test'
+  ...
+# Subtest: CSV escapa comillas y separadores
+ok 66 - CSV escapa comillas y separadores
+  ---
+  duration_ms: 0.398954
+  type: 'test'
+  ...
+# Subtest: PF-09 media de 2, 4 y 6 horas es 4
+ok 67 - PF-09 media de 2, 4 y 6 horas es 4
+  ---
+  duration_ms: 0.507524
+  type: 'test'
+  ...
+# Subtest: PF-09 sin resoluciones muestra No aplica
+ok 68 - PF-09 sin resoluciones muestra No aplica
+  ---
+  duration_ms: 0.067089
+  type: 'test'
+  ...
+# Subtest: RF-22 reabierta no entra en media
+ok 69 - RF-22 reabierta no entra en media
+  ---
+  duration_ms: 0.086349
+  type: 'test'
+  ...
+# Subtest: Tokens se guardan como huella binaria de 32 bytes
+ok 70 - Tokens se guardan como huella binaria de 32 bytes
+  ---
+  duration_ms: 0.964342
+  type: 'test'
+  ...
+# Subtest: RF-29 la huella ignora el orden de los campos JSON
+ok 71 - RF-29 la huella ignora el orden de los campos JSON
+  ---
+  duration_ms: 0.170118
+  type: 'test'
+  ...
+1..71
+# tests 71
+# suites 0
+# pass 71
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 198.3814

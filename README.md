@@ -1,107 +1,48 @@
-# SISTEMA INTEGRAL DE REPORTE Y SEGUIMIENTO DE INCIDENCIAS EN INFRAESTRUCTURA DEL INSTITUTO TECNOLÓGICO DE TOLUCA
+# Sistema de incidencias de infraestructura ITT
 
-Prototipo académico desarrollado con React, Vite y Tailwind CSS para simular el registro, consulta, asignación y seguimiento de incidencias de infraestructura dentro del Instituto Tecnológico de Toluca.
+Aplicación web para registrar, asignar, atender, revisar y cerrar incidencias del Instituto Tecnológico de Toluca. Esta versión sustituye la simulación de `localStorage` por una API con permisos en el servidor y una base relacional MySQL de 19 tablas y 142 campos.
 
-El sistema no usa backend ni base de datos real. Toda la persistencia se guarda de forma simulada en `localStorage` del navegador.
+## Funciones
 
-## Tecnologías
+- Cuentas institucionales creadas por administración, primer acceso y recuperación con credencial temporal de un uso.
+- Contraseñas Argon2id, sesiones revocables de 30 minutos, cookies protegidas, comprobación de origen y CSRF, limitación de intentos y CAPTCHA con imagen/audio.
+- Catálogos de edificios, espacios, fallas y periodos; selección por catálogo, mapa o QR versionado.
+- Incidencias con folio único, periodo vigente, evidencia JPEG/PNG privada y advertencias de posibles duplicados.
+- Asignación/reasignación, diagnóstico, avances públicos/internos, revisión administrativa independiente y cierre confirmado por el reportante.
+- Inconformidades, cancelación motivada, vinculación de duplicados e historial de responsables y eventos.
+- Notificaciones individuales, reportes filtrados, tiempos medios y CSV protegido contra fórmulas.
+- Interfaz institucional responsiva con navegación por rol, foco visible y contraste revisado.
 
-- React
-- Vite
-- Tailwind CSS
-- React Router DOM
-- Recharts
-- Lucide React
-- localStorage
+## Inicio
 
-## Instalación y ejecución
+Requisitos: Node 24, MySQL 8.4 y espeak-ng. Las instrucciones completas están en [docs/despliegue.md](docs/despliegue.md).
 
-```bash
-npm install
-npm run dev
-```
+1. Ejecutar `npm ci` y copiar `.env.example` a `.env`.
+2. Crear la base vacía y configurar sus credenciales, APP_SECRET y APP_ORIGIN.
+3. Ejecutar `npm run db:migrate` con la cuenta de migraciones.
+4. Crear al primer administrador mediante `npm run db:bootstrap`, definiendo ADMIN_EMAIL, ADMIN_IDENTIFIER y ADMIN_PASSWORD en el entorno.
+5. Ejecutar `npm run build` y `npm run server`. La API sirve también la interfaz en el mismo origen.
 
-Para generar una versión de producción:
+Para desarrollo: API en el puerto 3001, `npm run dev` en 5173 y APP_ORIGIN=http://localhost:5173. En producción usar HTTPS, NODE_ENV=production y COOKIE_SECURE=true. No publicar MySQL ni el directorio de fotografías.
 
-```bash
-npm run build
-```
+## Demostración
 
-Para revisar reglas de código:
+Solo sobre una base vacía y desechable, cargar `npm run db:demo` con ALLOW_DEMO=true. Incluye cuentas `admin`, `supervisor`, `tecnico`, `alumno`, `docente` y `otro` bajo `@toluca.tecnm.mx`, contraseña `PruebaITT2026!`.
 
-```bash
-npm run lint
-```
+Los usuarios y catálogos de la demostración son ficticios. El ITT debe validar ubicaciones, coordenadas y periodos antes de operar. El sistema no importa automáticamente los datos que estaban guardados en navegadores de la versión anterior.
 
-## Usuarios de prueba
+## Verificación
 
-| Rol | Correo | Contraseña |
-| --- | --- | --- |
-| Administrador | admin@ittoluca.edu.mx | admin123 |
-| Técnico | tecnico@ittoluca.edu.mx | tecnico123 |
-| Alumno | alumno@ittoluca.edu.mx | alumno123 |
-| Docente | docente@ittoluca.edu.mx | docente123 |
+- `npm run lint`
+- `npm test`
+- `npm run test:integration` sobre una base de prueba ya migrada y con la demo cargada.
+- `npm run test:e2e` con el servidor de prueba iniciado. Instalar el motor de navegador con Playwright. CHROMIUM_EXECUTABLE permite señalar un ejecutable local de pruebas.
+- `scripts/load-test.js`: ensayo configurable de 50 trabajadores con 10 000 y 20 000 registros. Requiere ALLOW_LOAD=true y una base desechable.
 
-## Temas visuales
+Las salidas y sus límites se describen en [docs/verificacion.md](docs/verificacion.md). Las pruebas de navegador no prueban automáticamente cámara física, disponibilidad de cuatro semanas, recuperación de desastres ni todos los navegadores de producción.
 
-El sistema incluye un selector de tema en el Sidebar, disponible para todos los usuarios. El tema activo se guarda en `localStorage` con la llave `temaVisualITT`, por lo que se conserva al recargar el navegador.
+## Implantación pendiente de validación institucional
 
-Temas disponibles:
+La infraestructura física, HTTPS del dominio definitivo, MySQL 8.4, réplica espejo, copias en caliente sin pausa, UPS, restauración medida y capacitación requieren configuración y evidencia en el destino. Se entregan scripts de respaldo/restauración con aplicación detenida y guía de operación; no se presentan esas tareas como certificadas.
 
-- Institucional oscuro
-- Institucional claro
-- Naranja, blanco y azul
-- Azul académico
-- Alto contraste
-
-Los temas modifican fondo, tarjetas, bordes, botones, textos destacados, acentos y colores de gráficas en Reportes.
-
-## Funcionalidades implementadas
-
-- Inicio de sesión y registro de usuarios simulados.
-- Validación de navegación y permisos por rol.
-- Registro de nuevas incidencias por Alumno y Docente.
-- Listado de incidencias filtrado según el rol del usuario.
-- Vista detallada de incidencia con ID, tipo, prioridad, ubicación, descripción, fecha, reportante, técnico, estado e historial.
-- Asignación de técnico por Administrador.
-- Cambio de estado y comentarios de avance por Administrador o Técnico asignado.
-- Historial con responsable, fecha, estado y comentario.
-- Notificaciones simuladas guardadas en localStorage.
-- Notificaciones marcables como leídas.
-- Reportes administrativos con tarjetas resumen, gráficas y tabla de incidencias recientes.
-- Panel de administración con usuarios registrados, conteo por rol, limpieza de datos y reinicio demo.
-- Datos demo iniciales sin duplicarse al recargar.
-- Selector de temas persistente.
-- Mapa institucional visible completo con opción de ampliarlo.
-- Pantalla Mapa ITT disponible para Alumno, Docente, Técnico y Administrador.
-- Edificio T aclarado como: T - Edificio de Sistemas Computacionales y TICs.
-
-## Estados de incidencia
-
-- Pendiente
-- En proceso
-- En revisión
-- Resuelto
-- Cerrado
-- Cancelado
-
-El Técnico sigue transiciones controladas para evitar cambios ilógicos. El Administrador puede intervenir directamente cuando sea necesario.
-
-## Pruebas manuales sugeridas
-
-1. Login: inicia sesión con cada usuario de prueba y confirma que el sidebar cambia según el rol.
-2. Cambio de tema: desde el Sidebar cambia entre los cinco temas, recarga la página y confirma que el tema se conserva.
-3. Registro de incidencia: entra como Alumno o Docente, abre Nueva incidencia, completa el formulario y verifica el mensaje de éxito.
-4. Mapa completo: en Nueva incidencia, confirma que el mapa no está recortado y usa Ampliar mapa para abrir/cerrar el modal.
-5. Mapa por rol: entra como Administrador o Técnico y abre Mapa ITT desde el Sidebar.
-6. Edificio T: abre el dropdown de edificios y confirma que aparece “T - Edificio de Sistemas Computacionales y TICs”.
-7. Asignación de técnico: entra como Administrador, abre una incidencia pendiente y asigna el técnico.
-8. Cambio de estado: entra como Técnico, abre una incidencia asignada, selecciona un estado permitido y agrega comentario.
-9. Notificaciones: revisa la pantalla Notificaciones y marca avisos como leídos.
-10. Reportes: entra como Administrador y valida tarjetas, gráficas por estado/tipo/edificio/prioridad y tabla reciente en distintos temas.
-11. Validación de roles: intenta acceder como Alumno o Técnico a `/reportes` o `/administracion`; el sistema debe regresar al Dashboard.
-12. Limpieza demo: entra como Administrador, abre Administración, usa Limpiar incidencias y Reiniciar datos demo confirmando los diálogos.
-
-## Notas académicas
-
-Este proyecto mantiene la arquitectura de prototipo solicitada. No incluye MySQL, Firebase, API REST ni backend. Los datos pueden reiniciarse desde el panel de Administración o limpiando el localStorage del navegador.
+El PDF menciona 224 casos de comprobación, pero no contiene sus fichas completas. El Word de pruebas conserva los 54 requisitos y distingue los ensayos realizados de los criterios todavía pendientes.

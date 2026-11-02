@@ -1,0 +1,89 @@
+{
+  "fecha": "2026-10-29",
+  "unitarias": {
+    "aprobadas": 71,
+    "fallidas": 0
+  },
+  "integracion": {
+    "aprobadas": 42,
+    "fallidas": 0
+  },
+  "interfaz": {
+    "startTime": "2026-10-29T22:58:58.656Z",
+    "duration": 17452.663999999997,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "accesibilidad": [
+    {
+      "pantalla": "acceso",
+      "infracciones": 0
+    },
+    {
+      "pantalla": "dashboard",
+      "infracciones": 0
+    },
+    {
+      "pantalla": "nueva-incidencia",
+      "infracciones": 0
+    },
+    {
+      "pantalla": "mis-incidencias",
+      "infracciones": 0
+    }
+  ],
+  "carga_breve": [
+    {
+      "records": 10000,
+      "concurrentWorkers": 50,
+      "durationSeconds": 10,
+      "requests": 343,
+      "errors": 0,
+      "p95ms": 1778.249855,
+      "formalCriterion": false
+    },
+    {
+      "records": 20000,
+      "concurrentWorkers": 50,
+      "durationSeconds": 10,
+      "requests": 242,
+      "errors": 0,
+      "p95ms": 2765.8987930000003,
+      "formalCriterion": false
+    }
+  ],
+  "comprobaciones_destino": [
+    {
+      "check": "MySQL 8.4",
+      "ok": false,
+      "actual": "8.0.46-0ubuntu0.24.04.3"
+    },
+    {
+      "check": "19 tablas y 142 campos",
+      "ok": true,
+      "actual": {
+        "tablas": 19,
+        "campos": 142
+      }
+    },
+    {
+      "check": "Cookies Secure en producción",
+      "ok": false
+    },
+    {
+      "check": "Secreto de servidor configurado",
+      "ok": true
+    },
+    {
+      "check": "Alternativa de audio CAPTCHA",
+      "ok": true
+    },
+    {
+      "check": "Cuenta de ejecución con bitácoras protegidas",
+      "ok": false,
+      "actual": "Validar grants por tabla según docs/despliegue.md; la cuenta root no es apropiada para producción."
+    }
+  ]
+}
