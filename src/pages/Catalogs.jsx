@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, X, Download } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { post, patch } from "../api";
-import { QrBatch } from "../components/QrBatch.jsx";
+import { labelArtwork } from "../labels";
+import { QrBatch, QrLabels } from "../components/QrBatch.jsx";
 import { useLoad } from "../hooks/useLoad.js";
 import {
   Input,
@@ -19,6 +20,7 @@ export function Catalogs() {
     [edit, setEdit] = useState(null),
     [creating, setCreating] = useState(false),
     [err, setErr] = useState(""),
+    [labelsRevision, setLabelsRevision] = useState(0),
     [qr, setQr] = useState(null),
     [busy, setBusy] = useState(false);
   async function save(e) {
@@ -32,9 +34,28 @@ export function Catalogs() {
         : await post("/catalogos/" + tab, d);
       setCreating(false);
       setEdit(null);
+      setQr(null);
+      setLabelsRevision((v) => v + 1);
       reload();
     } catch (er) {
       setErr(er.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function showLabel(path, body = {}) {
+    if (busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      const label = await labelArtwork(await post(path, body));
+      setQr(label);
+      if (body.renovar || path.startsWith("/edificios/")) {
+        setLabelsRevision((v) => v + 1);
+        reload();
+      }
+    } catch (e) {
+      setErr(e.message);
     } finally {
       setBusy(false);
     }
@@ -75,8 +96,17 @@ export function Catalogs() {
           </button>
         ))}
       </div>
+      {c.demostracion && (
+        <p className="notice">Catálogo ficticio de demostración académica.</p>
+      )}
       <ErrorBox message={err} />
-      {tab === "espacio" && <QrBatch spaces={c.espacio} buildings={c.edificio} />}
+      {tab === "espacio" && (
+        <QrBatch
+          key={labelsRevision}
+          spaces={c.espacio}
+          buildings={c.edificio}
+        />
+      )}
       {(creating || edit) && (
         <section className="panel form-panel">
           <div className="section-head">
@@ -194,20 +224,7 @@ export function Catalogs() {
         <section className="panel qr-label">
           <div>
             <h2>Etiqueta del espacio</h2>
-            <p>Versión {qr.version} · No contiene credenciales personales.</p>
-            <img
-              src={qr.imagen}
-              alt="Etiqueta QR para identificar el espacio"
-            />
-            <p>
-              <a
-                className="button"
-                download="etiqueta-itt.png"
-                href={qr.imagen}
-              >
-                <Download size={17} /> Descargar etiqueta
-              </a>
-            </p>
+            <QrLabels labels={[qr]} />
             <button className="text-button" onClick={() => setQr(null)}>
               Cerrar etiqueta
             </button>
@@ -256,39 +273,45 @@ export function Catalogs() {
                       >
                         Editar
                       </button>
+                      {tab === "edificio" && r.activo && (
+                        <button
+                          className="text-button"
+                          disabled={busy}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                "Preparar la etiqueta del edificio para reportar en su área general. Si falta, se registrará ese espacio.",
+                              )
+                            )
+                              showLabel("/edificios/" + r.id + "/qr");
+                          }}
+                        >
+                          Etiqueta del edificio
+                        </button>
+                      )}
                       {tab === "espacio" && r.activo && (
                         <>
                           <button
                             className="text-button"
-                            onClick={async () => {
-                              try {
-                                setQr(
-                                  await post("/espacios/" + r.id + "/qr", {}),
-                                );
-                              } catch (e) {
-                                setErr(e.message);
-                              }
-                            }}
+                            disabled={busy}
+                            onClick={() =>
+                              showLabel("/espacios/" + r.id + "/qr")
+                            }
                           >
                             Etiqueta QR
                           </button>
                           <button
                             className="text-button"
-                            onClick={async () => {
+                            disabled={busy}
+                            onClick={() => {
                               const motivo = window.prompt(
-                                "Renovar invalida la etiqueta anterior. Indica el motivo:",
+                                "Renovar invalida la etiqueta anterior. Escribe el motivo.",
                               );
-                              if (!motivo) return;
-                              try {
-                                setQr(
-                                  await post("/espacios/" + r.id + "/qr", {
-                                    renovar: true,
-                                    motivo,
-                                  }),
-                                );
-                              } catch (e) {
-                                setErr(e.message);
-                              }
+                              if (motivo?.trim())
+                                showLabel("/espacios/" + r.id + "/qr", {
+                                  renovar: true,
+                                  motivo,
+                                });
                             }}
                           >
                             Renovar

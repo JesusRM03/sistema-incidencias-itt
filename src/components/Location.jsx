@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { MapPin, Paperclip, ScanLine } from "lucide-react";
-import { api, photosToJSON } from "../api";
+import { useState, useEffect, useRef } from "react";
+import { MapPin, Camera, ScanLine } from "lucide-react";
+import { photosToJSON } from "../api";
 import map from "../assets/mapa-itt.jpg";
 import jsQR from "jsqr";
 import { Field, Input, Select, ErrorBox } from "./ui.jsx";
@@ -12,16 +12,27 @@ export function LocationPicker({
   showMap = true,
   mapOpen = false,
 }) {
-  const [building, setBuilding] = useState("");
+  const [building, setBuilding] = useState(""),
+    [point, setPoint] = useState("");
   const spaces =
     catalogs?.espacio.filter(
       (e) =>
         catalogs.edificio.some((b) => b.id === e.edificio_id && b.activo) &&
         e.activo,
     ) || [];
+  const markers = new Map();
+  for (const room of spaces) {
+    if (room.mapa_x == null || room.mapa_y == null) continue;
+    const position = room.mapa_x + "/" + room.mapa_y;
+    if (!markers.has(position)) markers.set(position, []);
+    markers.get(position).push(room);
+  }
   const selected = spaces.find((e) => String(e.id) === String(space));
   return (
     <>
+      {catalogs?.demostracion && (
+        <p className="muted">Ubicaciones ficticias de la demostración.</p>
+      )}
       <div className="form-grid">
         <Select
           label="Edificio"
@@ -74,144 +85,204 @@ export function LocationPicker({
               src={map}
               alt="Mapa de ubicación del Instituto Tecnológico de Toluca"
             />
-            {spaces
-              .filter((e) => e.mapa_x != null && e.mapa_y != null)
-              .map((e) => (
+            {[...markers].map(([position, rooms]) => {
+              const room = rooms[0],
+                grouped = rooms.length > 1;
+              const label = grouped
+                ? rooms.map((r) => r.clave).join(", ")
+                : room.clave;
+              return (
                 <button
                   type="button"
-                  key={e.id}
+                  key={position}
                   className={
-                    "map-pin " + (selected?.id === e.id ? "selected" : "")
+                    "map-pin " +
+                    (rooms.some((r) => r.id === selected?.id) ? "selected" : "")
                   }
                   style={{
-                    left: Number(e.mapa_x) * 100 + "%",
-                    top: Number(e.mapa_y) * 100 + "%",
+                    left: Number(room.mapa_x) * 100 + "%",
+                    top: Number(room.mapa_y) * 100 + "%",
                   }}
-                  aria-label={"Seleccionar " + e.clave}
-                  onClick={() => setSpace(String(e.id))}
+                  aria-label={"Seleccionar " + label}
+                  onClick={() => {
+                    setPoint(position);
+                    if (!grouped) setSpace(String(room.id));
+                  }}
                 >
                   <MapPin size={21} />
-                  <span>{e.clave}</span>
+                  <span>
+                    {grouped ? rooms.length + " espacios" : room.clave}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {(markers.get(point)?.length || 0) > 1 && (
+            <div className="map-options">
+              <p>Elige el espacio de este punto del mapa.</p>
+              {markers.get(point).map((room) => (
+                <button
+                  className="button small"
+                  key={room.id}
+                  type="button"
+                  onClick={() => setSpace(String(room.id))}
+                >
+                  {room.clave} · {room.nombre}
                 </button>
               ))}
-          </div>
+            </div>
+          )}
         </details>
       )}
     </>
   );
 }
 
-export function QRScanner({ onSelect }) {
+function qrToken(input) {
+  const raw = input.trim();
+  if (/^[a-f0-9]{64}$/.test(raw)) return raw;
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    /* Accept a token or a full URL. */
+  }
+  const token = url?.searchParams.get("qr");
+  if (url?.origin !== location.origin || !/^[a-f0-9]{64}$/.test(token || ""))
+    throw new Error("Etiqueta QR inválida. Usa una etiqueta de este sistema.");
+  return token;
+}
+function decodeFrame(canvas, source, width, height, maxSize) {
+  const scale = Math.min(1, maxSize / Math.max(width, height));
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return jsQR(image.data, image.width, image.height)?.data;
+}
+export function QRScanner({ onToken }) {
   const [open, setOpen] = useState(false),
     [manual, setManual] = useState(""),
     [err, setErr] = useState(""),
     video = useRef(null);
-  const resolve = useCallback(
-    async (value) => {
-      try {
-        const parsed = value.includes("qr=")
-          ? new URL(value).searchParams.get("qr")
-          : value;
-        const e = await api("/qr/" + encodeURIComponent(parsed));
-        onSelect(String(e.id));
-        setOpen(false);
-        setErr("");
-      } catch (e) {
-        setErr(e.message);
-      }
-    },
-    [onSelect],
-  );
-  async function readPhoto(file) {
-    if (!file) return;
-    setErr("");
-    let bitmap;
+  function lookup(raw) {
     try {
-      bitmap = await createImageBitmap(file);
-      const canvas = document.createElement("canvas");
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      context.drawImage(bitmap, 0, 0);
-      const data = context.getImageData(0, 0, canvas.width, canvas.height);
-      const decoded = jsQR(data.data, data.width, data.height);
-      if (!decoded) throw new Error("No se encontró un código QR legible en la imagen.");
-      await resolve(decoded.data);
+      onToken(qrToken(raw));
+      setErr("");
     } catch (e) {
       setErr(e.message);
+    }
+  }
+  async function readPhoto(file) {
+    if (!file) return;
+    setOpen(false);
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const data = decodeFrame(
+        document.createElement("canvas"),
+        img,
+        img.naturalWidth,
+        img.naturalHeight,
+        2000,
+      );
+      if (!data)
+        throw new Error(
+          "No se encontró un QR legible. Prueba con otra fotografía.",
+        );
+      lookup(data);
+    } catch (e) {
+      setErr(
+        e.name === "EncodingError"
+          ? "No se pudo abrir la fotografía."
+          : e.message,
+      );
     } finally {
-      bitmap?.close();
+      URL.revokeObjectURL(url);
     }
   }
   useEffect(() => {
     if (!open) return;
     let stream,
-      stop = false,
-      timer;
+      timer,
+      stopped = false;
     async function start() {
       try {
+        if (!navigator.mediaDevices?.getUserMedia)
+          throw new Error(
+            "Para abrir la cámara, entra mediante HTTPS. También puedes leer una fotografía.",
+          );
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          audio: false,
+          video: { facingMode: { ideal: "environment" } },
         });
-        if (stop) {
+        if (stopped) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
-        video.current.srcObject = stream;
-        await video.current.play();
-        const detector =
-          "BarcodeDetector" in window
-            ? new window.BarcodeDetector({ formats: ["qr_code"] })
-            : null;
-        const canvas = document.createElement("canvas"),
-          context = canvas.getContext("2d", { willReadFrequently: true });
-        const scan = async () => {
-          if (stop) return;
-          let codes = [];
-          if (detector) codes = await detector.detect(video.current);
-          else if (video.current.readyState >= 2) {
-            canvas.width = video.current.videoWidth;
-            canvas.height = video.current.videoHeight;
-            context.drawImage(video.current, 0, 0);
-            const image = context.getImageData(
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-            const decoded = jsQR(image.data, image.width, image.height);
-            if (decoded) codes = [{ rawValue: decoded.data }];
+        const player = video.current;
+        player.srcObject = stream;
+        await player.play();
+        const canvas = document.createElement("canvas");
+        function scan() {
+          if (stopped) return;
+          try {
+            if (player.readyState >= 2 && player.videoWidth) {
+              const raw = decodeFrame(
+                canvas,
+                player,
+                player.videoWidth,
+                player.videoHeight,
+                1000,
+              );
+              if (raw) {
+                setOpen(false);
+                onToken(qrToken(raw));
+                return;
+              }
+            }
+            timer = setTimeout(scan, 300);
+          } catch (e) {
+            setOpen(false);
+            setErr(e.message);
           }
-          if (codes.length) {
-            await resolve(codes[0].rawValue);
-            return;
-          }
-          timer = setTimeout(() => scan().catch((e) => setErr(e.message)), 400);
-        };
-        await scan();
+        }
+        scan();
       } catch (e) {
-        setErr(e.message);
+        if (stopped) return;
+        setOpen(false);
+        setErr(
+          e.name === "NotAllowedError"
+            ? "Permiso de cámara denegado. Permite el acceso o elige una fotografía."
+            : e.name === "NotFoundError"
+              ? "No se encontró cámara. Puedes cargar una fotografía."
+              : e.message,
+        );
       }
     }
     start();
     return () => {
-      stop = true;
+      stopped = true;
       clearTimeout(timer);
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [open, resolve]);
+  }, [open, onToken]);
   return (
     <div className="qr-scanner">
-      <button type="button" className="button" onClick={() => setOpen(!open)}>
+      <button
+        type="button"
+        className="button"
+        onClick={() => {
+          setErr("");
+          setOpen(!open);
+        }}
+      >
         <ScanLine size={17} />
         {open ? "Cerrar cámara" : "Escanear etiqueta QR"}
       </button>
-      {open && !navigator.mediaDevices?.getUserMedia && (
-        <p role="alert">
-          Para usar la cámara desde la página se necesita HTTPS (o localhost).
-          Puedes escanear con la cámara normal del celular o cargar una foto.
-        </p>
-      )}
       {open && (
         <video
           ref={video}
@@ -226,8 +297,9 @@ export function QRScanner({ onSelect }) {
           type="file"
           accept="image/png,image/jpeg,image/webp"
           onChange={(e) => {
-            void readPhoto(e.target.files?.[0]);
+            const file = e.target.files[0];
             e.target.value = "";
+            void readPhoto(file);
           }}
         />
       </label>
@@ -236,12 +308,14 @@ export function QRScanner({ onSelect }) {
           label="Enlace o código de la etiqueta QR"
           value={manual}
           onChange={(e) => setManual(e.target.value)}
-          placeholder="Pega el enlace si no usas cámara"
         />
         <button
           type="button"
           className="button"
-          onClick={() => resolve(manual)}
+          onClick={() => {
+            setOpen(false);
+            lookup(manual);
+          }}
         >
           Consultar
         </button>
@@ -251,14 +325,38 @@ export function QRScanner({ onSelect }) {
   );
 }
 
-export function PhotoInput({ setPhotos }) {
-  const [names, setNames] = useState([]),
-    [err, setErr] = useState("");
+export function PhotoInput({ photos, setPhotos, onReading }) {
+  const [err, setErr] = useState(""),
+    [reading, setReading] = useState(false),
+    lock = useRef(false);
+  async function add(e) {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (!files.length || lock.current) return;
+    lock.current = true;
+    setReading(true);
+    onReading?.(true);
+    try {
+      if (photos.length + files.length > 5)
+        throw new Error(
+          "El límite es de cinco fotografías. Quita una para añadir otra.",
+        );
+      const added = await photosToJSON(files);
+      setPhotos([...photos, ...added]);
+      setErr("");
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      lock.current = false;
+      setReading(false);
+      onReading?.(false);
+    }
+  }
   return (
-    <div>
+    <div className="photo-picker">
       <Field
         label="Fotografías opcionales"
-        hint="Hasta cinco imágenes JPEG o PNG de 5 MB cada una."
+        hint="Galería · Hasta cinco imágenes JPEG o PNG de 5 MB cada una."
       >
         {(rid) => (
           <input
@@ -266,27 +364,47 @@ export function PhotoInput({ setPhotos }) {
             type="file"
             accept="image/jpeg,image/png"
             multiple
-            onChange={async (e) => {
-              try {
-                const p = await photosToJSON(e.target.files);
-                setPhotos(p);
-                setNames([...e.target.files].map((f) => f.name));
-                setErr("");
-              } catch (er) {
-                setErr(er.message);
-                setPhotos([]);
-                setNames([]);
-                e.target.value = "";
-              }
-            }}
+            onChange={add}
+            disabled={reading}
           />
         )}
       </Field>
-      {names.length > 0 && (
-        <p className="attachment-list">
-          <Paperclip size={16} />
-          {names.join(" · ")}
-        </p>
+      <label className="camera-file">
+        <Camera size={17} /> Tomar fotografía
+        <input
+          aria-label="Tomar fotografía"
+          type="file"
+          capture="environment"
+          accept="image/jpeg,image/png"
+          onChange={add}
+          disabled={reading}
+        />
+      </label>
+      {reading && <p role="status">Preparando fotografías…</p>}
+      {photos.length > 0 && (
+        <ul className="photo-previews">
+          {photos.map((photo, index) => (
+            <li key={index}>
+              <img
+                src={"data:" + photo.type + ";base64," + photo.data}
+                alt={"Vista previa de " + photo.name}
+              />
+              <span>{photo.name}</span>
+              <button
+                type="button"
+                className="button small"
+                disabled={reading}
+                aria-label={"Quitar " + photo.name}
+                onClick={() => {
+                  setPhotos(photos.filter((_, i) => i !== index));
+                  setErr("");
+                }}
+              >
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
       <ErrorBox message={err} />
     </div>

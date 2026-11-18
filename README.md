@@ -27,9 +27,9 @@ Para desarrollo: API en el puerto 3001, `npm run dev` en 5173 y APP_ORIGIN=http:
 
 ## Demostración
 
-Solo sobre una base vacía y desechable, cargar `npm run db:demo` con ALLOW_DEMO=true. Incluye cuentas `admin`, `supervisor`, `tecnico`, `alumno`, `docente` y `otro` bajo `@toluca.tecnm.mx`, contraseña `PruebaITT2026!`.
+Para la exposición en Windows y teléfono utiliza [la guía de demostración HTTPS](docs/presentacion-movil-qr.md). Incluye configuración, credenciales locales, etiquetas individuales y por lote, reinicio aislado y guion por rol. El archivo privado `.env.demo` genera contraseñas distintas por instalación.
 
-Los usuarios y catálogos de la demostración son ficticios. El ITT debe validar ubicaciones, coordenadas y periodos antes de operar. El sistema no importa automáticamente los datos que estaban guardados en navegadores de la versión anterior.
+La demo contiene doce espacios ficticios. La base `incidencias_itt_demo` y sus fotografías tienen volúmenes propios. El catálogo institucional requiere datos validados por el ITT.
 
 ## Verificación
 
@@ -39,7 +39,7 @@ Los usuarios y catálogos de la demostración son ficticios. El ITT debe validar
 - `npm run test:e2e` con el servidor de prueba iniciado. Instalar el motor de navegador con Playwright. CHROMIUM_EXECUTABLE permite señalar un ejecutable local de pruebas.
 - `scripts/load-test.js`: ensayo configurable de 50 trabajadores con 10 000 y 20 000 registros. Requiere ALLOW_LOAD=true y una base desechable.
 
-Las salidas y sus límites se describen en [docs/verificacion.md](docs/verificacion.md). Las pruebas de navegador no prueban automáticamente cámara física, disponibilidad de cuatro semanas, recuperación de desastres ni todos los navegadores de producción.
+Los resultados de la entrega actual figuran en [la revisión final](docs/revision-final.md). [La verificación de octubre](docs/verificacion.md) conserva el resultado histórico. Las pruebas de navegador no prueban automáticamente cámara física, disponibilidad de cuatro semanas, recuperación de desastres ni todos los navegadores de producción.
 
 ## Implantación pendiente de validación institucional
 

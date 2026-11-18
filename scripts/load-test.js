@@ -2,7 +2,7 @@
 import fs from "node:fs/promises";
 import { performance } from "node:perf_hooks";
 import { pool, query as q } from "../server/db.js";
-if (process.env.ALLOW_LOAD !== "true")
+if (process.env.ALLOW_LOAD !== "true" || process.env.DB_NAME !== "incidencias_itt_demo")
   throw new Error("Usa ALLOW_LOAD=true únicamente en una base de prueba.");
 const base = process.env.LOAD_URL || "http://localhost:3001",
   origin = process.env.APP_ORIGIN,
@@ -16,7 +16,7 @@ for (let index = 0; index < 50; index++) {
     headers: { Origin: origin, "Content-Type": "application/json" },
     body: JSON.stringify({
       correo: "admin@toluca.tecnm.mx",
-      password: "PruebaITT2026!",
+      password: process.env.DEMO_PASSWORD_ADMIN,
     }),
   });
   if (!r.ok) throw new Error("Carga requiere una cuenta demo autorizada.");

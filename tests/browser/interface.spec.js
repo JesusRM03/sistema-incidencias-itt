@@ -17,7 +17,7 @@ async function login(page, name = "admin") {
   await page
     .getByLabel("Correo institucional", { exact: true })
     .fill(name + "@toluca.tecnm.mx");
-  await page.getByLabel("Contraseña", { exact: true }).fill("PruebaITT2026!");
+  await page.getByLabel("Contraseña", { exact: true }).fill(process.env["DEMO_PASSWORD_" + name.toUpperCase()]);
   await page
     .getByRole("button", { name: "Iniciar sesión", exact: true })
     .click();
@@ -51,12 +51,7 @@ for (const width of [360, 768, 1366])
   test("Interfaz adaptable a " + width + " px", async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await login(page);
-    for (const route of [
-      "dashboard",
-      "mis-incidencias",
-      "nueva-incidencia",
-      "catalogos",
-    ]) {
+    for (const [route] of routes) {
       await page.goto("/" + route);
       await expect(page.locator("main h1")).toBeVisible();
       await expect(page.getByText("Cargando información…")).toHaveCount(0);
@@ -82,7 +77,10 @@ test("Formulario registra y muestra el folio con evidencia", async ({
   await page.goto("/nueva-incidencia");
   await page.getByLabel("Edificio", { exact: true }).selectOption("1");
   await page.getByLabel("Aula o espacio", { exact: true }).selectOption("3");
+  const matches = page.waitForResponse((r) => r.url().includes("/coincidencias?") && r.url().includes("tipo_falla_id=5"));
   await page.getByLabel("Tipo de falla", { exact: true }).selectOption("5");
+  if ((await (await matches).json()).length)
+    await page.getByLabel("¿Qué hace diferente este reporte?").fill("Se ensaya otra conexión del laboratorio.");
   await page
     .getByLabel("Descripción", { exact: true })
     .fill("La conexión de red falla en este laboratorio durante las clases.");

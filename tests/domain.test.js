@@ -41,10 +41,10 @@ for (const v of ["0", "-1", "1 OR 1=1", "1.1", "9007199254740992", "abc"])
   test(`Identificador rechaza ${v}`, () => assert.throws(() => id(v)));
 test("Identificador válido", () => assert.equal(id("42"), 42));
 const user = {
-  nombre: "Ana Martínez",
+  nombre: "Persona de prueba",
   correo: "ANA@toluca.tecnm.mx",
   tipo_persona: "Alumno",
-  identificador: "23280182",
+  identificador: "00000001",
   rol_id: 1,
 };
 test("PF-01 alta válida normaliza el correo", () =>
@@ -74,8 +74,10 @@ for (const value of [
   test("Seguridad rechaza contraseña " + value, () =>
     assert.throws(() => password(value)),
   );
-test("Contraseña válida", () =>
-  assert.equal(password("PruebaITT2026!"), "PruebaITT2026!"));
+test("Contraseña válida", () => {
+  const value = "Aa1" + crypto.randomUUID();
+  assert.equal(password(value), value);
+});
 for (const value of [
   "=1+1",
   "+SUM(A1)",

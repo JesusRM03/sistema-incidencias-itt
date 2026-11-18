@@ -2,9 +2,18 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import sharp from "sharp";
+import { randomBytes } from "node:crypto";
 import { app } from "../../server/app.js";
 import { hmac } from "../../server/domain.js";
 import { pool, query as q } from "../../server/db.js";
+if (
+  process.env.DB_NAME !== "incidencias_itt_demo" ||
+  process.env.ALLOW_DEMO !== "true"
+)
+  throw new Error(
+    "La suite modifica datos y requiere la base exclusiva de demostración.",
+  );
+
 let server, base;
 const origin = process.env.APP_ORIGIN;
 class Client {
@@ -39,9 +48,9 @@ class Client {
   async login(email) {
     const r = await this.call("/acceso", "POST", {
       correo: email + "@toluca.tecnm.mx",
-      password: "PruebaITT2026!",
+      password: process.env["DEMO_PASSWORD_" + email.toUpperCase()],
     });
-    assert.equal(r.status, 200, JSON.stringify(r));
+    assert.equal(r.status, 200, r.data?.message);
     return this;
   }
 }
@@ -57,9 +66,9 @@ const action = async (c, accion, extra = {}) => {
   });
 };
 before(async () => {
-  server = app.listen(3001, "127.0.0.1");
+  server = app.listen(0, "127.0.0.1");
   await new Promise((r) => server.once("listening", r));
-  base = "http://127.0.0.1:3001";
+  base = "http://127.0.0.1:" + server.address().port;
   admin = await new Client().login("admin");
   supervisor = await new Client().login("supervisor");
   tech = await new Client().login("tecnico");
@@ -130,6 +139,7 @@ test("RF-16 carga de imagen real y alta con periodo", async () => {
     espacio_id: 2,
     tipo_falla_id: 4,
     descripcion: "Prueba de una falla distinta en el mobiliario del espacio.",
+    diferencia_duplicado: "Ensayo independiente de esta falla.",
     fotos: [{ data: bytes.toString("base64") }],
   };
   const r = await owner.call("/incidencias", "POST", payload, {
@@ -165,7 +175,7 @@ test("RF-17 duplicado exige explicación sin revelar identidad", async () => {
   const r = await owner.call(
     "/incidencias",
     "POST",
-    { ...payload, fotos: [] },
+    { ...payload, fotos: [], diferencia_duplicado: "" },
     { "Idempotency-Key": crypto.randomUUID() },
   );
   assert.equal(r.status, 409);
@@ -330,7 +340,8 @@ test("RF-28 etiqueta QR sin identidad", async () => {
   const r = await admin.call("/espacios/1/qr", "POST", {});
   assert.equal(r.status, 200);
   previousQR = new URL(r.data.url).searchParams.get("qr");
-  const out = await new Client().call("/qr/" + previousQR);
+  assert.equal((await new Client().call("/qr/" + previousQR)).status, 401);
+  const out = await owner.call("/qr/" + previousQR);
   assert.equal(out.status, 200);
   assert.equal(out.data.id, 1);
   assert.ok(!("correo" in out.data));
@@ -341,7 +352,7 @@ test("RF-28 renovación invalida QR anterior", async () => {
     motivo: "Sustitución de etiqueta",
   });
   assert.equal(r.status, 200);
-  assert.equal((await new Client().call("/qr/" + previousQR)).status, 404);
+  assert.equal((await owner.call("/qr/" + previousQR)).status, 410);
 });
 test("RF-12 filtros se intersectan y conservan paginación", async () => {
   const r = await admin.call(
@@ -384,12 +395,15 @@ test("RF-11 lectura individual no modifica aviso ajeno", async () => {
   );
 });
 let recoveryUser, recoveryToken;
+const recoveryEmail = "ensayo-" + crypto.randomUUID() + "@toluca.tecnm.mx";
+const recoveryIdentifier = "QA-" + randomBytes(6).toString("hex");
+
 test("RF-01 alta administrativa entrega credencial temporal", async () => {
   const r = await admin.call("/usuarios", "POST", {
     nombre: "Prueba de recuperación",
-    correo: "recuperacion@toluca.tecnm.mx",
-    identificador: "23289999",
-    tipo_persona: "Alumno",
+    correo: recoveryEmail,
+    identificador: recoveryIdentifier,
+    tipo_persona: "Personal",
     rol_id: 1,
     motivo: "Identidad comprobada para prueba",
   });
@@ -403,9 +417,9 @@ test("RF-01 correo duplicado rechazado", async () =>
     (
       await admin.call("/usuarios", "POST", {
         nombre: "Duplicada",
-        correo: "recuperacion@toluca.tecnm.mx",
-        identificador: "23289998",
-        tipo_persona: "Alumno",
+        correo: recoveryEmail,
+        identificador: recoveryIdentifier,
+        tipo_persona: "Personal",
         rol_id: 1,
         motivo: "Prueba de duplicación",
       })
@@ -417,31 +431,28 @@ test("RF-27 canje con CAPTCHA activa cuenta y no permite segundo uso", async () 
     cap = await c.call("/captcha?proposito=Cambio%20inicial");
   assert.equal(cap.status, 200);
   assert.ok(cap.data.imagen.startsWith("data:image/png;base64,"));
-  // White-box fixture helper uses the test database and server key; no solution is exposed by the API.
-  async function solve(rid) {
-    const [challenge] = await q(
-      pool,
-      "SELECT respuesta_hmac FROM reto_captcha WHERE id=?",
-      [rid],
-    );
-    for (let value = 10000; value < 100000; value++) {
-      if (hmac(String(value)).equals(challenge.respuesta_hmac))
-        return String(value);
-    }
-    throw new Error("No se pudo resolver el fixture CAPTCHA");
+  async function fixedAnswer(rid) {
+    // Set a known answer only in the disposable database. The deployed CAPTCHA is unchanged.
+    const answer = String(Math.floor(10000 + Math.random() * 90000));
+    await q(pool, "UPDATE reto_captcha SET respuesta_hmac=? WHERE id=?", [
+      hmac(answer),
+      rid,
+    ]);
+    return answer;
   }
-  const answer = await solve(cap.data.id);
+  const answer = await fixedAnswer(cap.data.id),
+    newPassword = "Aa1" + randomBytes(20).toString("hex");
   const body = {
     token: recoveryToken,
-    password: "OtraPruebaITT2026!",
-    confirmacion: "OtraPruebaITT2026!",
+    password: newPassword,
+    confirmacion: newPassword,
     captcha_id: cap.data.id,
     captcha_respuesta: answer,
   };
   const r = await c.call("/credenciales/canjear", "POST", body);
   assert.equal(r.status, 200, JSON.stringify(r));
   const cap2 = await c.call("/captcha?proposito=Cambio%20inicial"),
-    answer2 = await solve(cap2.data.id);
+    answer2 = await fixedAnswer(cap2.data.id);
   assert.equal(
     (
       await c.call("/credenciales/canjear", "POST", {
@@ -509,4 +520,127 @@ test("RF-30 vincula duplicado mediante el folio visible y conserva ambos registr
   assert.equal(out.estado, "Cancelado");
   assert.equal(out.principal_id, 1);
   assert.equal((await admin.call("/incidencias/1")).status, 200);
+});
+
+test("Alta concurrente con foto confirma un solo folio, evento y archivo", async () => {
+  const uuid = crypto.randomUUID(),
+    body = {
+      ...payload,
+      diferencia_duplicado: "Se revisa otro equipo del salón.",
+    };
+  const create = () =>
+    owner.call("/incidencias", "POST", body, { "Idempotency-Key": uuid });
+  const both = await Promise.all([create(), create()]);
+  assert.deepEqual(both.map((r) => r.status).sort(), [200, 201]);
+  assert.equal(both[0].data.folio, both[1].data.folio);
+  const detail = (await owner.call("/incidencias/" + both[0].data.id)).data;
+  assert.equal(detail.evidencias.length, 1);
+  assert.equal(detail.historial.length, 1);
+});
+test("Altas aceptan cinco fotos y rechazan una sexta y archivos mayores de 5 MB", async () => {
+  const png = payload.fotos[0],
+    base = {
+      ...payload,
+      diferencia_duplicado: "Corresponde a una segunda falla comprobada.",
+    };
+  const create = (fotos) =>
+    other.call(
+      "/incidencias",
+      "POST",
+      { ...base, fotos },
+      { "Idempotency-Key": crypto.randomUUID() },
+    );
+  assert.equal((await create(Array(6).fill(png))).status, 422);
+  assert.equal(
+    (await create([{ data: Buffer.alloc(5000001).toString("base64") }])).status,
+    422,
+  );
+  const five = await create(Array(5).fill(png));
+  assert.equal(five.status, 201);
+  assert.equal(
+    (await other.call("/incidencias/" + five.data.id)).data.evidencias.length,
+    5,
+  );
+});
+test("Totales por estado aplican el ámbito de usuario y superan las veinte filas visibles", async () => {
+  const body = {
+    ...payload,
+    fotos: [],
+    diferencia_duplicado: "Este ensayo corresponde a una prueba individual.",
+  };
+  for (let n = 0; n < 21; n++) {
+    const result = await other.call("/incidencias", "POST", body, {
+      "Idempotency-Key": crypto.randomUUID(),
+    });
+    assert.equal(result.status, 201);
+  }
+  const list = (await other.call("/incidencias?pagina=2")).data;
+  const [expected] = await q(
+    pool,
+    "SELECT COUNT(*) n FROM incidencia WHERE reportante_id=6 AND estado='Pendiente'",
+  );
+  assert.ok(list.total > 20);
+  assert.ok(list.items.every((item) => item.reportante_id === 6));
+  assert.equal(
+    list.porEstado.find((s) => s.nombre === "Pendiente").total,
+    expected.n,
+  );
+});
+test("QR preasignado a espacio nuevo, redescarga estable y área general independiente", async () => {
+  const b = await admin.call("/catalogos/edificio", "POST", {
+    clave: "QA-" + randomBytes(4).toString("hex"),
+    nombre: "Edificio de ensayo",
+    activo: 1,
+    motivo: "Ensayo de catálogo",
+  });
+  assert.equal(b.status, 201);
+  const s = await admin.call("/catalogos/espacio", "POST", {
+    edificio_id: b.data.id,
+    clave: "QA",
+    nombre: "Espacio de ensayo",
+    activo: 1,
+    motivo: "Alta autorizada para prueba",
+  });
+  assert.equal(s.status, 201);
+  const [count] = await q(
+    pool,
+    "SELECT COUNT(*) n FROM codigo_qr WHERE espacio_vigente=?",
+    [s.data.id],
+  );
+  assert.equal(count.n, 1);
+  const emit = (route) => admin.call(route, "POST", {});
+  const room = (await emit("/espacios/" + s.data.id + "/qr")).data;
+  const [g, h] = await Promise.all([
+    emit("/edificios/" + b.data.id + "/qr"),
+    emit("/edificios/" + b.data.id + "/qr"),
+  ]);
+  assert.equal(g.status, 200);
+  assert.equal(h.data.url, g.data.url);
+  assert.notEqual(room.url, g.data.url);
+  assert.equal(
+    room.url,
+    (await emit("/espacios/" + s.data.id + "/qr")).data.url,
+  );
+  assert.equal(
+    (await owner.call("/qr/" + new URL(g.data.url).searchParams.get("qr"))).data
+      .nombre,
+    "Área general del edificio",
+  );
+});
+test("Estadísticas combinadas de edificio y periodo concuerdan con los detalles", async () => {
+  const data = (await admin.call("/reportes?edificio_id=1&periodo_id=1")).data;
+  assert.ok(data.total > 0);
+  for (const group of [
+    data.porEdificio,
+    data.porPeriodo,
+    data.porEstado,
+    data.porTipo,
+    data.porTecnico,
+  ])
+    assert.equal(
+      group.reduce((n, row) => n + row.total, 0),
+      data.total,
+    );
+  assert.equal(data.porEdificio.length, 1);
+  assert.equal(data.porPeriodo.length, 1);
 });

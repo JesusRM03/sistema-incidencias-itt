@@ -38,6 +38,16 @@ check(
   500,
 );
 check(
+  new URL(origin).origin === origin && /^https?:/.test(origin),
+  "APP_ORIGIN debe ser el origen exacto sin ruta.",
+  500,
+);
+check(
+  !origin.startsWith("https://") || secure,
+  "HTTPS requiere COOKIE_SECURE=true.",
+  500,
+);
+check(
   process.env.NODE_ENV !== "production" ||
     (secure && origin.startsWith("https://")),
   "Producción requiere cookies seguras y HTTPS.",
@@ -51,7 +61,8 @@ check(
 );
 await fs.mkdir(files, { recursive: true });
 app.disable("x-powered-by");
-app.set("trust proxy", false);
+// Only enable this when the API is reachable exclusively through our reverse proxy.
+app.set("trust proxy", process.env.BEHIND_PROXY === "true" ? 1 : false);
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -476,17 +487,32 @@ api.get("/salud", async (req, res) => {
   await q(pool, "SELECT 1");
   res.json({ ok: true });
 });
+api.use(auth);
 api.get("/qr/:token", async (req, res) => {
   check(/^[a-f0-9]{64}$/.test(req.params.token), "Código QR inválido.", 404);
   const [r] = await q(
     pool,
-    "SELECT e.id,e.clave,e.nombre,b.nombre edificio FROM codigo_qr qr JOIN espacio e ON e.id=qr.espacio_id JOIN edificio b ON b.id=e.edificio_id WHERE qr.token=? AND qr.revocado_en IS NULL AND e.activo=1 AND b.activo=1",
+    "SELECT e.id,e.clave,e.nombre,b.nombre edificio,e.activo,b.activo edificio_activo,qr.revocado_en FROM codigo_qr qr JOIN espacio e ON e.id=qr.espacio_id JOIN edificio b ON b.id=e.edificio_id WHERE qr.token=?",
     [req.params.token],
   );
-  check(r, "El QR está revocado o el espacio no está disponible.", 404);
-  res.json(r);
+  check(r, "Etiqueta QR desconocida.", 404);
+  check(
+    !r.revocado_en,
+    "La etiqueta fue revocada. Utiliza la versión vigente.",
+    410,
+  );
+  check(
+    r.activo && r.edificio_activo,
+    "El espacio de la etiqueta está inactivo.",
+    410,
+  );
+  res.json({
+    id: r.id,
+    clave: r.clave,
+    nombre: r.nombre,
+    edificio: r.edificio,
+  });
 });
-api.use(auth);
 api.get("/catalogos", async (req, res) => {
   const all = req.user.rol_id === 3 && req.query.todos === "1";
   const out = {};
@@ -495,7 +521,10 @@ api.get("/catalogos", async (req, res) => {
       pool,
       `SELECT * FROM ${table}${all ? "" : " WHERE activo=1"} ORDER BY id`,
     );
-  res.json(out);
+  res.json({
+    ...out,
+    demostracion: process.env.DB_NAME === "incidencias_itt_demo",
+  });
 });
 api.get("/tecnicos", async (req, res) => {
   check(req.user.rol_id === 3, "Acceso administrativo.", 403);
@@ -625,7 +654,7 @@ api.post("/catalogos/:tabla", admin, saveCatalog);
 api.patch("/catalogos/:tabla/:id", admin, saveCatalog);
 async function saveCatalog(req, res) {
   const table = req.params.tabla;
-  check(catalogFields[table], "Catálogo inválido.", 404);
+  check(Object.hasOwn(catalogFields, table), "Catálogo inválido.", 404);
   const fields = catalogFields[table],
     d = req.body,
     reason = text(d.motivo, 3, 1000, "Motivo");
@@ -659,6 +688,18 @@ async function saveCatalog(req, res) {
     }
     if (table === "espacio") {
       data.edificio_id = id(data.edificio_id);
+      if (old?.clave === "@EDIFICIO")
+        check(
+          data.clave === old.clave &&
+            data.edificio_id === old.edificio_id &&
+            data.nombre === old.nombre,
+          "El área general conserva su edificio, nombre y clave.",
+        );
+      else
+        check(
+          data.clave.toUpperCase() !== "@EDIFICIO",
+          "La etiqueta general se emite desde Edificios.",
+        );
       const [b] = await q(c, "SELECT * FROM edificio WHERE id=?", [
         data.edificio_id,
       ]);
@@ -718,6 +759,14 @@ async function saveCatalog(req, res) {
         `INSERT INTO ${table}(${fields.join(",")}) VALUES(${fields.map(() => "?").join(",")})`,
         values,
       );
+    if (table === "espacio" && data.activo && !rid)
+      await issueQr(
+        c,
+        r.insertId,
+        req.user,
+        false,
+        "Emisión al registrar el espacio",
+      );
     await audit(
       c,
       req.user,
@@ -740,51 +789,104 @@ api.get("/espacios", async (req, res) =>
     ),
   ),
 );
-api.post("/espacios/:id/qr", admin, async (req, res) => {
+async function issueQr(c, spaceId, user, renew, reason) {
+  // Calling transactions hold either the existing space row or its new insertion.
+  const [prev] = await q(
+    c,
+    "SELECT token,version FROM codigo_qr WHERE espacio_id=? AND revocado_en IS NULL FOR UPDATE",
+    [spaceId],
+  );
+  if (prev && !renew) return prev;
+  const [last] = await q(
+    c,
+    "SELECT COALESCE(MAX(version),0) n FROM codigo_qr WHERE espacio_id=?",
+    [spaceId],
+  );
+  if (prev)
+    await q(
+      c,
+      `UPDATE codigo_qr SET revocado_en=${nowSQL} WHERE espacio_vigente=?`,
+      [spaceId],
+    );
+  const next = { token: token(), version: last.n + 1 };
+  await q(
+    c,
+    `INSERT INTO codigo_qr(espacio_id,version,token,emitido_por,emitido_en) VALUES(?,?,?,?,${nowSQL})`,
+    [spaceId, next.version, next.token, user.id],
+  );
+  await audit(
+    c,
+    user,
+    "codigo_qr",
+    spaceId,
+    renew ? "Renovación" : "Emisión",
+    reason,
+  );
+  return next;
+}
+api.post(["/espacios/:id/qr", "/edificios/:id/qr"], admin, async (req, res) => {
   const out = await tx(async (c) => {
-    const [e] = await q(
+    let spaceId = id(req.params.id);
+    if (req.path.startsWith("/edificios/")) {
+      const [building] = await q(
+        c,
+        "SELECT id FROM edificio WHERE id=? AND activo=1 FOR UPDATE",
+        [spaceId],
+      );
+      check(building, "Edificio no disponible.", 404);
+      const [common] = await q(
+        c,
+        "SELECT id,nombre FROM espacio WHERE edificio_id=? AND clave='@EDIFICIO' FOR UPDATE",
+        [building.id],
+      );
+      const name = "Área general del edificio";
+      if (common) {
+        check(
+          common.nombre === name,
+          "La clave reservada ya pertenece a otro espacio. Revisa el catálogo.",
+          409,
+        );
+        spaceId = common.id;
+      } else {
+        const result = await q(
+          c,
+          "INSERT INTO espacio(edificio_id,clave,nombre) VALUES(?,'@EDIFICIO',?)",
+          [building.id, name],
+        );
+        spaceId = result.insertId;
+        await audit(
+          c,
+          req.user,
+          "espacio",
+          spaceId,
+          "Alta",
+          "Área general autorizada al emitir etiqueta del edificio",
+        );
+      }
+    }
+    const [space] = await q(
       c,
-      "SELECT * FROM espacio WHERE id=? AND activo=1 FOR UPDATE",
-      [id(req.params.id)],
+      "SELECT e.id,e.clave,e.nombre,b.clave edificio_clave,b.nombre edificio FROM espacio e JOIN edificio b ON e.edificio_id=b.id WHERE e.id=? AND e.activo=1 AND b.activo=1 FOR UPDATE",
+      [spaceId],
     );
-    check(e, "Espacio no disponible.", 404);
-    const [prev] = await q(
-      c,
-      "SELECT * FROM codigo_qr WHERE espacio_id=? AND revocado_en IS NULL FOR UPDATE",
-      [e.id],
-    );
-    if (prev && !req.body.renovar) return prev;
-    const [max] = await q(
-      c,
-      "SELECT COALESCE(MAX(version),0) n FROM codigo_qr WHERE espacio_id=?",
-      [e.id],
-    );
-    await q(
-      c,
-      `UPDATE codigo_qr SET revocado_en=${nowSQL} WHERE espacio_id=? AND revocado_en IS NULL`,
-      [e.id],
-    );
-    const t = token();
-    await q(
-      c,
-      `INSERT INTO codigo_qr(espacio_id,version,token,emitido_por,emitido_en) VALUES(?,?,?,?,${nowSQL})`,
-      [e.id, max.n + 1, t, req.user.id],
-    );
-    await audit(
-      c,
-      req.user,
-      "codigo_qr",
-      e.id,
-      "Emisión",
-      req.body.motivo || "Emisión de etiqueta QR",
-    );
-    return { token: t, version: max.n + 1 };
-  }, "qr:" + req.params.id);
-  const url = origin + "/?qr=" + out.token;
+    check(space, "Espacio no disponible.", 404);
+    const renew = req.body.renovar === true;
+    const reason = renew
+      ? text(req.body.motivo, 3, 1000, "Motivo de renovación")
+      : "Emisión de etiqueta QR";
+    return { space, ...(await issueQr(c, space.id, req.user, renew, reason)) };
+  });
+  const url = origin + "/nueva-incidencia?qr=" + out.token;
   res.json({
+    ...out.space,
     url,
     version: out.version,
-    imagen: await QRCode.toDataURL(url, { width: 480, margin: 2 }),
+    demostracion: process.env.DB_NAME === "incidencias_itt_demo",
+    imagen: await QRCode.toDataURL(url, {
+      width: 480,
+      margin: 4,
+      errorCorrectionLevel: "M",
+    }),
   });
 });
 // Only the three minimal fields below are exposed for other people's possible duplicates.
@@ -853,7 +955,10 @@ function listWhere(u, params) {
 }
 api.get("/incidencias", async (req, res) => {
   const w = listWhere(req.user, req.query),
-    page = Math.max(1, Math.min(100000, Number(req.query.pagina) || 1)),
+    page = Math.max(
+      1,
+      Math.min(100000, Math.trunc(Number(req.query.pagina)) || 1),
+    ),
     limit = 20;
   const rows = await q(
     pool,
@@ -863,17 +968,20 @@ api.get("/incidencias", async (req, res) => {
       (page - 1) * limit,
     w.args,
   );
-  const [total] = await q(
+  const porEstado = await q(
     pool,
-    "SELECT COUNT(*) n FROM incidencia i JOIN espacio e ON e.id=i.espacio_id LEFT JOIN asignacion a ON a.incidencia_id=i.id AND a.fin_en IS NULL" +
-      w.sql,
+    "SELECT i.estado nombre,COUNT(*) total FROM incidencia i JOIN espacio e ON e.id=i.espacio_id LEFT JOIN asignacion a ON a.incidencia_id=i.id AND a.fin_en IS NULL" +
+      w.sql +
+      " GROUP BY i.estado",
     w.args,
   );
+  const total = porEstado.reduce((sum, row) => sum + row.total, 0);
   res.json({
     items: rows,
-    total: total.n,
+    total,
+    porEstado,
     pagina: page,
-    paginas: Math.max(1, Math.ceil(total.n / limit)),
+    paginas: Math.max(1, Math.ceil(total / limit)),
   });
 });
 async function prepPhotos(photos) {
@@ -885,7 +993,7 @@ async function prepPhotos(photos) {
   try {
     for (const photo of photos) {
       check(
-        typeof photo.data === "string" && photo.data.length <= 6666668,
+        typeof photo?.data === "string" && photo.data.length <= 6666668,
         "Fotografía demasiado grande.",
       );
       const bytes = Buffer.from(photo.data, "base64");
@@ -956,7 +1064,7 @@ api.post("/incidencias", async (req, res) => {
       async (c) => {
         const [prev] = await q(
           c,
-          "SELECT * FROM solicitud_idempotente WHERE usuario_id=? AND operacion='alta_incidencia' AND clave=?",
+          "SELECT s.*,i.folio FROM solicitud_idempotente s JOIN incidencia i ON i.id=s.incidencia_id WHERE s.usuario_id=? AND s.operacion='alta_incidencia' AND clave=?",
           [req.user.id, key],
         );
         if (prev) {
@@ -965,7 +1073,7 @@ api.post("/incidencias", async (req, res) => {
             "Esta clave ya se usó con otros datos.",
             409,
           );
-          return { id: prev.incidencia_id, reintento: true };
+          return { id: prev.incidencia_id, folio: prev.folio, reintento: true };
         }
         const [space] = await q(
           c,
@@ -1250,6 +1358,16 @@ api.post("/incidencias/:id/acciones", async (req, res) => {
           "La solución debe aprobarla una persona distinta de su autor.",
           403,
         );
+        const involved = await q(
+          c,
+          "SELECT id FROM intervencion WHERE incidencia_id=? AND autor_id=? LIMIT 1",
+          [i.id, req.user.id],
+        );
+        check(
+          !involved.length,
+          "Otro administrador debe revisar el trabajo de quien intervino.",
+          403,
+        );
         target = "Resuelto";
       } else if (d.accion === "devolver") {
         check(
@@ -1356,30 +1474,45 @@ api.get("/evidencias/:id", async (req, res) => {
     .set("Content-Disposition", "inline")
     .sendFile(path.join(files, e.clave_archivo));
 });
+// A recipient may lose visibility after reassignment or a change of role.
+const noticeTables =
+  "notificacion n JOIN evento_incidencia v ON v.id=n.evento_id JOIN incidencia i ON i.id=v.incidencia_id LEFT JOIN asignacion a ON a.incidencia_id=i.id AND a.fin_en IS NULL";
+function noticeScope(user) {
+  const conditions = ["n.destinatario_id=?"];
+  const args = [user.id];
+  if (user.rol_id !== 3) {
+    const assigned = user.rol_id === 2 ? " OR a.tecnico_id=?" : "";
+    conditions.push(
+      "(i.reportante_id=?" + assigned + ")",
+      "(v.visibilidad='Pública'" + assigned + ")",
+    );
+    args.push(user.id);
+    if (assigned) args.push(user.id, user.id);
+  }
+  return { where: " WHERE " + conditions.join(" AND "), args };
+}
 api.get("/notificaciones", async (req, res) => {
+  const scope = noticeScope(req.user);
   const rows = await q(
     pool,
-    "SELECT n.id,n.leida_en,v.incidencia_id,v.tipo,v.creado_en,v.visibilidad,i.folio FROM notificacion n JOIN evento_incidencia v ON v.id=n.evento_id JOIN incidencia i ON i.id=v.incidencia_id WHERE n.destinatario_id=? ORDER BY n.id DESC LIMIT 200",
-    [req.user.id],
+    "SELECT n.id,n.leida_en,v.incidencia_id,v.tipo,v.creado_en,v.visibilidad,i.folio FROM " +
+      noticeTables +
+      scope.where +
+      " ORDER BY n.id DESC",
+    scope.args,
   );
-  const visible = [];
-  for (const row of rows) {
-    const [i] = await q(pool, "SELECT * FROM incidencia WHERE id=?", [
-      row.incidencia_id,
-    ]);
-    if (
-      (await canSee(pool, req.user, i)) &&
-      (row.visibilidad === "Pública" || (await staff(pool, req.user, i)))
-    )
-      visible.push(row);
-  }
-  res.json(visible);
+  res.json(rows);
 });
 api.post("/notificaciones/:id/leer", async (req, res) => {
+  const scope = noticeScope(req.user);
   const r = await q(
     pool,
-    `UPDATE notificacion SET leida_en=COALESCE(leida_en,${nowSQL}) WHERE id=? AND destinatario_id=?`,
-    [id(req.params.id), req.user.id],
+    "UPDATE " +
+      noticeTables +
+      ` SET n.leida_en=COALESCE(n.leida_en,${nowSQL})` +
+      scope.where +
+      " AND n.id=?",
+    [...scope.args, id(req.params.id)],
   );
   check(r.affectedRows, "Aviso no disponible.", 404);
   res.json({ ok: true });
@@ -1448,13 +1581,15 @@ api.get(["/reportes", "/reportes.csv"], admin, async (req, res) => {
             : r[field]) || "Sin asignar";
         a[k] = (a[k] || 0) + 1;
         return a;
-      }, {}),
+      }, Object.create(null)),
     ).map(([nombre, total]) => ({ nombre, total }));
   res.json({
     total: rows.length,
     tiempoMedioHoras: meanHours(rows),
     porEstado: group("estado"),
     porTipo: group("tipo"),
+    porEdificio: group("edificio"),
+    porPeriodo: group("periodo"),
     porEspacio: group("espacio"),
     porTecnico: group("tecnico"),
     items: rows,

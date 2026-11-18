@@ -28,7 +28,6 @@ export function CampusMap() {
             <Link
               className="button primary"
               to={"/nueva-incidencia?espacio=" + space}
-              onClick={() => sessionStorage.setItem("itt_space", space)}
             >
               Reportar aquí <ArrowRight size={16} />
             </Link>

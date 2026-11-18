@@ -2,6 +2,8 @@
 
 La API requiere Node 24, MySQL 8.4 y espeak-ng (CAPTCHA en audio). Windows y Linux pueden alojar Node y MySQL. En Windows el sintetizador se configura con ESPEAK_BINARY apuntando al ejecutable. Los scripts Bash de respaldo requieren WSL/Git Bash o una tarea equivalente de PowerShell validada por TI.
 
+Para exponer en Windows con un teléfono, sigue [la instalación HTTPS de demostración](presentacion-movil-qr.md). Usa la instalación siguiente para el entorno principal.
+
 ## Instalación
 
 1. Instalar dependencias con `npm ci` y copiar `.env.example` a `.env`.
@@ -9,7 +11,7 @@ La API requiere Node 24, MySQL 8.4 y espeak-ng (CAPTCHA en audio). Windows y Lin
 3. Configurar credenciales y generar APP_SECRET con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Mantener `.env` privado.
 4. Ejecutar `npm run db:migrate` con una cuenta de migraciones. El script no elimina tablas ni datos.
 5. En una base vacía ejecutar `npm run db:bootstrap` con ADMIN_EMAIL institucional, ADMIN_IDENTIFIER y ADMIN_PASSWORD configurados temporalmente en el entorno. No escribir contraseñas en el repositorio ni argumentos del proceso.
-6. Verificar catálogos con el ITT. Los datos de `db:demo` son ficticios y solo deben usarse con ALLOW_DEMO=true sobre una base vacía de pruebas.
+6. Verificar catálogos con el ITT. La siembra de demostración requiere el nombre exacto `incidencias_itt_demo`, ALLOW_DEMO=true y las claves individuales generadas por `demo:config`.
 7. `npm run build` y `npm run server`. La API sirve también el cliente compilado en el mismo origen. En desarrollo se usa `npm run dev`, APP_ORIGIN=http://localhost:5173, API en 3001.
 8. Publicar el origen mediante un proxy inverso HTTPS institucional. En producción fijar NODE_ENV=production, COOKIE_SECURE=true y APP_ORIGIN=https://dominio-autorizado. No abrir MySQL a Internet. La API escucha solo en loopback. Si MySQL está en otro nodo, configurar un túnel TLS o conector con CA verificada antes de usarlo fuera del host.
 9. Ejecutar `node --env-file=.env scripts/deployment-check.js`; su resultado identifica verificaciones pendientes, no certifica un despliegue.

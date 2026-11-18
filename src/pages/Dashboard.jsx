@@ -12,16 +12,9 @@ import { useLoad } from "../hooks/useLoad.js";
 import { PageHead, Loading, Stat, IncidentTable } from "../components/ui.jsx";
 
 export function Dashboard({ user }) {
-  const { data, error } = useLoad("/incidencias"),
-    { data: report } = useLoad(
-      user.rol_id === 3 ? "/reportes" : "/notificaciones",
-    );
+  const { data, error } = useLoad("/incidencias");
   if (!data) return <Loading error={error} />;
-  const stats = user.rol_id === 3 ? report?.porEstado || [] : null;
-  const count = (s) =>
-    stats
-      ? stats.find((x) => x.nombre === s)?.total || 0
-      : data.items.filter((x) => x.estado === s).length;
+  const count = (state) => data.porEstado.find((row) => row.nombre === state)?.total || 0;
   return (
     <>
       <PageHead
@@ -71,9 +64,7 @@ export function Dashboard({ user }) {
         <Stat
           label="Por atender"
           value={count("Pendiente")}
-          note={
-            user.rol_id === 3 ? "Pendientes de asignación" : "En esta página"
-          }
+          note="Pendientes de asignación"
           icon={Clock}
         />
         <Stat
@@ -85,7 +76,7 @@ export function Dashboard({ user }) {
         <Stat
           label="Soluciones"
           value={count("Resuelto") + count("Cerrado")}
-          note={user.rol_id === 3 ? "Resueltas y cerradas" : "En esta página"}
+          note="Resueltas y cerradas"
           icon={CheckCircle2}
         />
       </div>
