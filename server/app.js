@@ -1504,7 +1504,7 @@ api.get("/notificaciones", async (req, res) => {
   const scope = noticeScope(req.user);
   const rows = await q(
     pool,
-    "SELECT n.id,n.leida_en,v.incidencia_id,v.tipo,v.creado_en,v.visibilidad,i.folio FROM " +
+    "SELECT n.id,n.evento_id,n.leida_en,v.incidencia_id,v.tipo,v.creado_en,v.visibilidad,i.folio FROM " +
       noticeTables +
       scope.where +
       " ORDER BY n.id DESC",

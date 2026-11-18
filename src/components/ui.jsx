@@ -4,13 +4,14 @@ import { Link } from "react-router-dom";
 import { ClipboardList, ArrowUpRight, AlertCircle } from "lucide-react";
 import { STATES } from "../constants.js";
 
-export function Field({ label, children, hint }) {
+export function Field({ label, children, hint, error }) {
   const rid = useId();
   return (
     <div className="field">
       <label htmlFor={rid}>{label}</label>
-      {typeof children === "function" ? children(rid) : children}
-      <small>{hint}</small>
+      {typeof children === "function" ? children(rid, error ? { "aria-invalid": true, "aria-describedby": rid + "-error" } : {}) : children}
+      {error && <small className="field-error" id={rid + "-error"} role="alert">{error}</small>}
+      {hint && <small>{hint}</small>}
     </div>
   );
 }
@@ -23,11 +24,11 @@ export function Input({ label, hint, ...props }) {
   );
 }
 
-export function Select({ label, children, ...props }) {
+export function Select({ label, children, error, ...props }) {
   return (
-    <Field label={label}>
-      {(rid) => (
-        <select id={rid} {...props}>
+    <Field label={label} error={error}>
+      {(rid, validation) => (
+        <select id={rid} {...validation} {...props}>
           {children}
         </select>
       )}
@@ -35,9 +36,9 @@ export function Select({ label, children, ...props }) {
   );
 }
 
-export function Textarea({ label, ...props }) {
+export function Textarea({ label, error, ...props }) {
   return (
-    <Field label={label}>{(rid) => <textarea id={rid} {...props} />}</Field>
+    <Field label={label} error={error}>{(rid, validation) => <textarea id={rid} {...validation} {...props} />}</Field>
   );
 }
 
@@ -108,9 +109,18 @@ export function Stat({ label, value, note, icon: Icon }) {
   );
 }
 
-export function IncidentTable({ rows }) {
+export function IncidentTable({ rows, list, rememberPosition }) {
   return rows.length ? (
-    <div className="table-scroll">
+    <div onClickCapture={rememberPosition}>
+      <div className="incident-cards">
+        {rows.map((i) => <Link className="incident-card" key={i.id} to={"/incidencias/" + i.id} state={list ? {list} : null}>
+          <span className="card-heading"><strong>{i.folio}</strong><Badge state={i.estado}/></span>
+          <span className="fault-label"><FaultIcon name={i.tipo}/>{i.tipo}</span>
+          <span>{i.espacio_clave} · {i.edificio}</span>
+          <small>{i.prioridad || "Prioridad por revisar"} · {i.tecnico || "Sin asignar"}</small>
+        </Link>)}
+      </div>
+      <div className="table-scroll incident-desktop">
       <table>
         <thead>
           <tr>
@@ -128,7 +138,7 @@ export function IncidentTable({ rows }) {
           {rows.map((i) => (
             <tr key={i.id}>
               <td>
-                <Link className="folio" to={"/incidencias/" + i.id}>
+                <Link state={list ? {list} : null} className="folio" to={"/incidencias/" + i.id}>
                   {i.folio}
                 </Link>
                 <small className="fault-label"><FaultIcon name={i.tipo} />{i.tipo}</small>
@@ -153,7 +163,7 @@ export function IncidentTable({ rows }) {
               <td>{i.tecnico || <span className="muted">Sin asignar</span>}</td>
               <td>
                 <Link
-                  className="icon-button"
+                  className="icon-button" state={list ? {list} : null}
                   to={"/incidencias/" + i.id}
                   aria-label={"Abrir " + i.folio}
                 >
@@ -164,7 +174,7 @@ export function IncidentTable({ rows }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </div></div>
   ) : (
     <Empty />
   );

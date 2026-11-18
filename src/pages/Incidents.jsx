@@ -1,7 +1,7 @@
 import { FaultIcon } from "../components/FaultIcon.jsx";
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus, ArrowLeft, ArrowRight } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Plus, ArrowLeft, ArrowRight, SlidersHorizontal } from "lucide-react";
 import { STATES } from "../constants.js";
 import { useLoad } from "../hooks/useLoad.js";
 import {
@@ -110,9 +110,40 @@ export function FilterBar({
 }
 
 export function Incidents({ user }) {
-  const [filters, setFilters] = useState({}),
-    { data, error } = useLoad("/incidencias?" + new URLSearchParams(filters)),
-    { data: c } = useLoad("/catalogos");
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const filters = Object.fromEntries(params);
+  const { data, error } = useLoad("/incidencias?" + params);
+  const { data: c } = useLoad("/catalogos");
+  const storageKey = "itt:lista:" + user.id + ":" + location.key;
+  const restored = useRef("");
+  const [showFilters, setShowFilters] = useState(() => {
+    try {
+      const value = sessionStorage.getItem(storageKey + ":filters");
+      if (value !== null) return value === "open";
+    } catch { /* Storage is optional. */ }
+    return window.matchMedia("(min-width: 641px)").matches;
+  });
+  const activeCount = [...params.keys()].filter((key) => key !== "pagina").length;
+  function setFilters(values) {
+    setParams(Object.entries(values).filter(([, value]) => value !== "" && value != null), {replace: true});
+  }
+  function rememberPosition(event) {
+    if (!event.target.closest("a") || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    try { sessionStorage.setItem(storageKey, String(window.scrollY)); sessionStorage.setItem(storageKey + ":filters", showFilters ? "open" : "closed"); } catch { /* Storage is optional. */ }
+  }
+  useLayoutEffect(() => {
+    if (!data || restored.current === storageKey) return;
+    restored.current = storageKey;
+    try {
+      const y = sessionStorage.getItem(storageKey);
+      if (y !== null) {
+        window.scrollTo({top: Number(y), behavior: "instant"});
+        sessionStorage.removeItem(storageKey);
+        sessionStorage.removeItem(storageKey + ":filters");
+      }
+    } catch { /* The list remains usable without storage. */ }
+  }, [storageKey, data]);
   return (
     <>
       <PageHead
@@ -125,7 +156,11 @@ export function Incidents({ user }) {
         </Link>
       </PageHead>
       <section className="panel">
-        <FilterBar filters={filters} setFilters={setFilters} catalogs={c} />
+        <button type="button" className="button filter-toggle" aria-expanded={showFilters} aria-controls="incident-filters" onClick={() => setShowFilters(!showFilters)}>
+          <SlidersHorizontal size={17}/>{showFilters ? "Ocultar filtros" : "Buscar y filtrar"}{activeCount ? " (" + activeCount + ")" : ""}
+        </button>
+        <div id="incident-filters" hidden={!showFilters}><FilterBar filters={filters} setFilters={setFilters} catalogs={c} /></div>
+        {filters.tecnico_id && <p className="muted">Filtro activo: {String(user.id) === filters.tecnico_id ? "mis asignaciones" : "técnico seleccionado"}</p>}
         <div className="section-head compact">
           <span className="muted">
             {data?.total || 0} incidencias encontradas
@@ -134,7 +169,7 @@ export function Incidents({ user }) {
         </div>
         {data ? (
           <>
-            <IncidentTable rows={data.items} />
+            <IncidentTable rows={data.items} list={location.pathname + location.search} rememberPosition={rememberPosition} />
             <div className="pagination">
               <span>
                 Página {data.pagina} de {data.paginas}

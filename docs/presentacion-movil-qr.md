@@ -76,7 +76,7 @@ En tu PC, `notepad .env.demo` muestra una contraseña aleatoria diferente por cu
 
 La siembra crea siete edificios, veinticuatro espacios con sus respectivos QR y doce incidencias repartidas entre seis estados. Cada folio de muestra incluye los eventos que le corresponden. Un folio creado durante la exposición recibe su propio identificador. La cuenta de la API tiene permisos por tabla y solo puede consultar y agregar eventos y auditorías.
 
-En **Mapa del campus**, toca la clave del edificio sobre el plano, escoge su salón y pulsa **Reportar aquí**. En el formulario puedes seleccionar la categoría por su dibujo. El selector de paleta guarda el tema Normal, Oscuro o Bosque en ese navegador.
+En **Mapa del campus**, toca la clave del edificio sobre el plano, escoge su salón y pulsa **Reportar en** seguido de la clave del espacio. En el formulario puedes seleccionar la categoría por su dibujo. El selector de paleta guarda el tema Normal, Oscuro o Bosque en ese navegador.
 
 ## 4. Etiquetas QR
 
@@ -84,7 +84,7 @@ En **Mapa del campus**, toca la clave del edificio sobre el plano, escoge su sal
 2. **Preparar todas las etiquetas** reúne los espacios activos. **Descargar lote ZIP** incluye un PNG por espacio; **Imprimir etiquetas** abre la hoja de impresión. Puedes guardar esa hoja como PDF desde el navegador.
 3. **Renovar** pide un motivo e invalida la versión anterior. La redescarga conserva el QR vigente. El modelo del PDF define vigencia por revocación y disponibilidad del espacio. Las etiquetas vigentes no tienen una fecha de caducidad programada.
 4. Para un salón real, registra primero el edificio validado, después el espacio con su clave y nombre. Las coordenadas son opcionales. Para reportar en el edificio completo, usa **Edificios → Etiqueta del edificio**. Al confirmar se crea, si falta, un espacio de área general dentro del edificio. Así se mantiene la relación con `espacio` del modelo relacional.
-5. En el teléfono usa su cámara normal o **Reportar una incidencia → Identificar espacio por QR**. Puedes leer una foto de la etiqueta o pegar el enlace. El acceso pide sesión, muestra la ubicación y espera **Usar este espacio**. Una etiqueta revocada permite elegir otra ubicación.
+5. En el teléfono usa su cámara normal o **Reportar una incidencia → Identificar espacio por QR**. Puedes leer una foto de la etiqueta o pegar el enlace. El acceso pide sesión, muestra la ubicación y espera **Usar este salón**. Una etiqueta revocada permite elegir otra ubicación.
 
 ## 5. Detener o repetir las pruebas
 

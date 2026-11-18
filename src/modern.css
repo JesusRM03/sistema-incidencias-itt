@@ -2010,3 +2010,59 @@ small.fault-label {display:flex;gap:.35rem;margin:.3rem 0}
 .campus-pin:focus-visible {outline:3px solid #ffcf41;z-index:2}
 .campus-rooms:not(:empty) {padding:1rem;background:var(--surface-2);border-radius:12px;scroll-margin:5rem}
 .campus-rooms h3 {margin:0 0 .7rem}
+
+/* Acciones y lectura del expediente en pantallas táctiles. */
+.role-home {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.75rem}
+.role-shortcut,.incident-card {color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:12px;text-decoration:none}
+.role-shortcut {display:grid;grid-template-columns:1fr auto;align-items:center;padding:1rem;gap:.65rem}
+.role-shortcut > svg:first-child {grid-column:1/-1;color:var(--text-muted)}
+.role-shortcut strong {font-size:1.5rem}
+.role-shortcut:hover,.incident-card:hover {background:var(--surface-2)}
+.map-shortcut {display:inline-flex;align-items:center;gap:.4rem;margin:1rem 0;color:var(--text)}
+.incident-cards {display:none}
+.campus-pin {min-height:36px;min-width:36px}
+.campus-rooms button,.case-guide button {min-height:44px}
+.case-guide {border-left:4px solid var(--navy-active);padding:.85rem 1rem;border-radius:.5rem;background:var(--surface-2);margin-bottom:1rem}
+.case-guide p {margin:0 0 .6rem}
+.case-guide > div,.gallery-toolbar,.card-heading {display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.case-section,.timeline li,.form-panel :is(input,select,textarea) {scroll-margin-block:5rem}
+.case-section:focus,.timeline li:focus {outline:2px solid var(--text-muted);outline-offset:2px}
+.timeline li[aria-current="location"] {background:var(--surface-2);border-radius:5px}
+.timeline {padding-left:52px}
+.timeline .event-icon {display:grid;place-items:center;position:absolute;left:-33px;top:0;width:24px;height:24px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--text)}
+.more-actions > section {border:none;box-shadow:none}
+.case-feedback {position:sticky;top:4.5rem;z-index:3}
+.evidence-grid button {background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:.5rem;overflow:hidden;padding:0;cursor:zoom-in}
+.evidence-grid button span {display:block;padding:.4rem}
+.photo-dialog {width:min(94vw,60rem);max-height:92dvh;border:1px solid var(--border);border-radius:12px;padding:.8rem;background:var(--surface);color:var(--text)}
+.photo-dialog::backdrop {background:#101824dd}
+.photo-dialog > img {display:block;width:100%;height:min(64dvh,38rem);object-fit:contain;background:#111923;touch-action:pan-y pinch-zoom}
+.gallery-toolbar,.card-heading {justify-content:space-between}
+.gallery-toolbar {padding:.45rem 0}
+.qr-recognized {border:2px solid #27815a}
+.qr-place {display:grid;gap:.3rem;font-size:1.05rem}
+.qr-place svg {color:var(--text);width:30px;height:30px}
+.qr-place strong {font-size:1.35rem}
+.qr-place br {display:none}
+.scan-frame {position:relative;background:#101824;text-align:center;border-radius:10px;overflow:hidden}
+.scan-frame video {display:block;object-fit:contain}
+.scan-frame span {position:absolute;inset:15% 22%;border:3px solid white;border-radius:10px;box-shadow:0 0 0 2px #16324a;pointer-events:none}
+@media(max-width:640px) {
+  .incident-desktop {display:none}
+  .incident-cards {display:grid;gap:.6rem}
+  .incident-card {display:grid;gap:.35rem;padding:.8rem}
+  .incident-card small {color:var(--text-muted)}
+  .campus-plan {overflow:auto}
+  .campus-pin {min-width:40px;min-height:40px}
+  .role-home {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .timeline {padding-left:42px}
+  .photo-dialog {width:100vw;max-width:100vw}
+}
+.field .field-error {font-size:.9rem;color:var(--text);font-weight:600;margin-top:.2rem}
+.field [aria-invalid="true"] {outline:2px solid var(--text-muted)}
+@keyframes event-arrival {
+  from {box-shadow:inset 4px 0 var(--text-muted)}
+  to {box-shadow:inset 0 0 transparent}
+}
+.timeline li[aria-current="location"] {animation:event-arrival 1.6s ease-out 1}
+.filter-toggle {margin:.75rem 1rem}
