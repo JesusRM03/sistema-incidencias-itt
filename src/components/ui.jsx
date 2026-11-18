@@ -9,9 +9,12 @@ export function Field({ label, children, hint, error }) {
   return (
     <div className="field">
       <label htmlFor={rid}>{label}</label>
-      {typeof children === "function" ? children(rid, error ? { "aria-invalid": true, "aria-describedby": rid + "-error" } : {}) : children}
+      {typeof children === "function" ? children(rid, {
+        "aria-invalid": error ? true : undefined,
+        "aria-describedby": error ? rid + "-error" : hint ? rid + "-hint" : undefined,
+      }) : children}
       {error && <small className="field-error" id={rid + "-error"} role="alert">{error}</small>}
-      {hint && <small>{hint}</small>}
+      {hint && <small id={rid + "-hint"}>{hint}</small>}
     </div>
   );
 }
@@ -24,9 +27,9 @@ export function Input({ label, hint, ...props }) {
   );
 }
 
-export function Select({ label, children, error, ...props }) {
+export function Select({ label, children, error, hint, ...props }) {
   return (
-    <Field label={label} error={error}>
+    <Field label={label} error={error} hint={hint}>
       {(rid, validation) => (
         <select id={rid} {...validation} {...props}>
           {children}

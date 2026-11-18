@@ -7,6 +7,10 @@ import { Field, Input, Select, ErrorBox } from "./ui.jsx";
 
 import { reveal } from "../navigation.js";
 
+function searchable(value) {
+  return value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+}
+
 export function LocationPicker({
   catalogs,
   space,
@@ -16,6 +20,7 @@ export function LocationPicker({
   invalidSpace = "",
 }) {
   const [building, setBuilding] = useState(""),
+    [spaceQuery, setSpaceQuery] = useState(""),
     roomPanel = useRef(null);
   const spaces =
     catalogs?.espacio.filter(
@@ -36,6 +41,10 @@ export function LocationPicker({
     pins.get(position).buildings.push(building);
   }
   const [shared, setShared] = useState("");
+  const query = searchable(spaceQuery.trim());
+  const matches = query && mapOpen
+    ? spaces.filter((room) => searchable(room.clave + " " + room.nombre).includes(query))
+    : [];
   function chooseBuilding(id) {
     setBuilding(String(id));
     setSpace("");
@@ -45,6 +54,28 @@ export function LocationPicker({
     <>
       {catalogs?.demostracion && (
         <p className="muted">Ubicaciones ficticias de la demostración.</p>
+      )}
+      {mapOpen && (
+        <div className="room-search">
+          <Input label="Buscar salón" placeholder="Clave o nombre del espacio" value={spaceQuery}
+            onChange={(event) => setSpaceQuery(event.target.value)} />
+          {query && (
+            matches.length ? (
+              <ul aria-label="Salones encontrados">
+                {matches.map((room) => (
+                  <li key={room.id}>
+                    <button type="button" className="button" onClick={() => {
+                      chooseBuilding(room.edificio_id);
+                      setSpace(String(room.id));
+                      setSpaceQuery("");
+                      requestAnimationFrame(() => reveal(roomPanel.current));
+                    }}>{room.clave} · {room.nombre}</button>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="muted" role="status">No encontramos salones con esa búsqueda.</p>
+          )}
+        </div>
       )}
       <div className="form-grid">
         <Select

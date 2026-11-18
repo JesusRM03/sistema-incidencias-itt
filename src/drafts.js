@@ -39,6 +39,8 @@ function database() {
 }
 // Retain an in-memory copy if this browser temporarily refuses local storage.
 const memory = new Map();
+const savedPhotos = new Map();
+const pendingWrites = new Map();
 export async function readDraft(id) {
   if (memory.has(id)) return memory.get(id);
   const db = await database();
@@ -47,28 +49,47 @@ export async function readDraft(id) {
       store = tx.objectStore("drafts");
     const fields = store.get(id),
       photos = store.get(id + "/photos");
-    tx.oncomplete = () =>
-      resolve(
-        fields.result && { ...fields.result, photos: photos.result || [] },
-      );
+    tx.oncomplete = () => {
+      const value = fields.result && { ...fields.result, photos: photos.result || [] };
+      if (value) savedPhotos.set(id, value.photos);
+      resolve(value);
+    };
     tx.onerror = tx.onabort = () => reject(tx.error);
   });
 }
-export async function saveDraft(id, value, photosChanged = false) {
-  memory.set(id, value);
+async function writeDraft(id, value) {
   const db = await database();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("drafts", "readwrite"),
-      store = tx.objectStore("drafts");
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction("drafts", "readwrite");
+    const store = tx.objectStore("drafts");
     if (!value) {
       store.delete(id);
       store.delete(id + "/photos");
     } else {
       const { photos, ...fields } = value;
       store.put(fields, id);
-      if (photosChanged) store.put(photos, id + "/photos");
+      if (savedPhotos.get(id) !== photos) store.put(photos, id + "/photos");
     }
     tx.oncomplete = resolve;
     tx.onerror = tx.onabort = () => reject(tx.error);
   });
+  if (value) savedPhotos.set(id, value.photos);
+  else savedPhotos.delete(id);
+}
+
+export async function saveDraft(id, value) {
+  memory.set(id, value);
+  // Serialize writes so the date and photographs describe the same saved draft.
+  const previous = pendingWrites.get(id) || Promise.resolve();
+  const write = previous.catch(() => {}).then(() => writeDraft(id, value));
+  pendingWrites.set(id, write);
+  try {
+    await write;
+  } catch (error) {
+    if (value && memory.get(id) === value)
+      memory.set(id, { ...value, savedAt: null });
+    throw error;
+  } finally {
+    if (pendingWrites.get(id) === write) pendingWrites.delete(id);
+  }
 }

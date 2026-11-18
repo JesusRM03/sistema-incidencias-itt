@@ -124,7 +124,7 @@ export function Incidents({ user }) {
     } catch { /* Storage is optional. */ }
     return window.matchMedia("(min-width: 641px)").matches;
   });
-  const activeCount = [...params.keys()].filter((key) => key !== "pagina").length;
+  const activeCount = [...params.keys()].filter((key) => key !== "pagina" && key !== "orden").length;
   function setFilters(values) {
     setParams(Object.entries(values).filter(([, value]) => value !== "" && value != null), {replace: true});
   }
@@ -159,8 +159,18 @@ export function Incidents({ user }) {
         <button type="button" className="button filter-toggle" aria-expanded={showFilters} aria-controls="incident-filters" onClick={() => setShowFilters(!showFilters)}>
           <SlidersHorizontal size={17}/>{showFilters ? "Ocultar filtros" : "Buscar y filtrar"}{activeCount ? " (" + activeCount + ")" : ""}
         </button>
-        <div id="incident-filters" hidden={!showFilters}><FilterBar filters={filters} setFilters={setFilters} catalogs={c} /></div>
+        <div id="incident-filters" hidden={!showFilters}><FilterBar filters={filters} setFilters={(values) => setFilters({ orden: filters.orden, ...values })} catalogs={c} /></div>
         {filters.tecnico_id && <p className="muted">Filtro activo: {String(user.id) === filters.tecnico_id ? "mis asignaciones" : "técnico seleccionado"}</p>}
+        {user.rol_id === 2 && (
+          <div className="incident-sort">
+            <Select label="Ordenar incidencias" value={filters.orden || "reciente"}
+              onChange={(event) => setFilters({ ...filters, orden: event.target.value, pagina: 1 })}>
+              <option value="prioridad">Prioridad más alta</option>
+              <option value="antigua">Más antigua</option>
+              <option value="reciente">Más reciente</option>
+            </Select>
+          </div>
+        )}
         <div className="section-head compact">
           <span className="muted">
             {data?.total || 0} incidencias encontradas

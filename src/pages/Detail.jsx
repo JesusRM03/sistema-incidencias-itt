@@ -1,3 +1,5 @@
+import { SolutionReview } from "../components/SolutionReview.jsx";
+import { eventTitle } from "../eventTitles.js";
 import { EvidenceGallery } from "../components/EvidenceGallery.jsx";
 import { reveal } from "../navigation.js";
 import { useEffect, useRef, useState } from "react";
@@ -47,6 +49,7 @@ export function Detail({ user }) {
   const admin = user.rol_id === 3;
   const sending = useRef(false);
   const [progress, setProgress] = useState(null);
+  const [visibility, setVisibility] = useState("Pública");
   const navigate = useNavigate();
   const openedId = i?.id;
   useEffect(() => {
@@ -82,6 +85,7 @@ export function Detail({ user }) {
       }, {onProgress: path === "intervenciones" && photos.length ? setProgress : undefined});
       if (path === "intervenciones") {
         form.reset();
+        setVisibility("Pública");
         setPhotos([]);
       }
       if (path === "asignaciones") {
@@ -152,6 +156,20 @@ export function Detail({ user }) {
           {success}
         </p>
       )}
+          {canReview && (
+            <ActionForm id="revisar"
+              title="Validar solución técnica"
+              actions={
+                i.intervenciones.some((v) => v.autor_id === user.id)
+                  ? ["devolver"]
+                  : ["aprobar", "devolver"]
+              }
+              send={send}
+              busy={busy}
+            >
+              <SolutionReview incident={i} />
+            </ActionForm>
+          )}
       <div className="detail-grid">
         <div>
           <section className="panel detail-summary">
@@ -205,12 +223,12 @@ export function Detail({ user }) {
                 <li key={h.id} id={"evento-" + h.id} aria-current={location.hash === "#evento-" + h.id ? "location" : undefined} tabIndex={-1}>
                   <span className="event-icon"><EventIcon type={h.tipo}/></span>
                   <div className="timeline-heading">
-                    <strong>{h.tipo}</strong>
+                    <strong>{h.autor} · {eventTitle(h.tipo)}</strong>
                     <time>{date(h.creado_en)}</time>
                   </div>
                   <p>{h.motivo}</p>
                   <small>
-                    {h.autor} ·{" "}
+
                     {h.estado_anterior && h.estado_anterior !== h.estado_nuevo
                       ? h.estado_anterior + " → "
                       : ""}
@@ -326,7 +344,15 @@ export function Detail({ user }) {
                   <option>Solución</option>
                   <option>Comentario</option>
                 </Select>
-                <Select label="Visibilidad" name="visibilidad">
+                <Select
+                  label="Visibilidad"
+                  name="visibilidad"
+                  value={visibility}
+                  onChange={(event) => setVisibility(event.target.value)}
+                  hint={visibility === "Pública"
+                    ? "También podrá leerla la persona que reportó la falla."
+                    : "Visible para administración y el técnico con asignación vigente."}
+                >
                   <option>Pública</option>
                   <option>Interna</option>
                 </Select>
@@ -362,18 +388,6 @@ export function Detail({ user }) {
               </form>
             </section>
           )}
-          {canReview && (
-            <ActionForm id="revisar"
-              title="Validar solución técnica"
-              actions={
-                i.intervenciones.some((v) => v.autor_id === user.id)
-                  ? ["devolver"]
-                  : ["aprobar", "devolver"]
-              }
-              send={send}
-              busy={busy}
-            />
-          )}{" "}
           {canClose && (
             <ActionForm id="cierre"
               title={
@@ -408,11 +422,12 @@ export function Detail({ user }) {
   );
 }
 
-export function ActionForm({ id, title, actions, send, busy }) {
+export function ActionForm({ id, title, actions, send, busy, children }) {
   const [action, setAction] = useState(actions[0]);
   return (
     <section id={id} tabIndex={-1} className="panel form-panel case-section">
       <h2>{title}</h2>
+      {children}
       <form
         onSubmit={(e) => {
           if (window.confirm("¿Confirmas esta acción?")) send(e, "acciones");
