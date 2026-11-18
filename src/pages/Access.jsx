@@ -136,6 +136,11 @@ export function Login({ onLogin }) {
                 <Input
                   label="Correo institucional"
                   name="correo"
+                  onChange={() => {
+                    setNeedsCaptcha(false);
+                    setCaptcha({});
+                    setErr("");
+                  }}
                   type="email"
                   autoComplete="username"
                   placeholder="usuario@toluca.tecnm.mx"
