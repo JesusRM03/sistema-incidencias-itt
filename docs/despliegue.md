@@ -33,7 +33,7 @@ TI debe validar UPS, contactos regulados, tierra física, protecciones eléctric
 ## Comprobaciones
 
 - Unitarias: `npm test`.
-- Integración: crear base de prueba vacía, migrar, cargar demo explícita y ejecutar `npm run test:integration` con APP_ORIGIN=http://localhost:3001. La suite modifica esa base; jamás usar datos institucionales.
-- Interfaz: servidor de prueba iniciado y `npm run test:e2e`. Instalar motores con `npx playwright install chromium firefox`.
+- La suite de integración exige `DB_NAME=incidencias_itt_demo`, `ALLOW_DEMO=true` y las seis cuentas de la siembra. La sección 7 de la [guía de presentación](presentacion-movil-qr.md) da el comando para ejecutarla dentro de la demo local.
+- La suite de interfaz usa Chromium con `npm run test:e2e`. En HTTPS importa la raíz de la demo en el navegador y señala el mismo certificado a Node con `NODE_EXTRA_CA_CERTS`.
 - Carga: `node --env-file=.env scripts/load-test.js` solo contra base de prueba con ALLOW_LOAD=true. Ejecutar después de las pruebas visuales.
 - Seguridad e instalación: repetir las pruebas en el destino HTTPS, Windows y Linux. No sustituir esos resultados con una compilación local.

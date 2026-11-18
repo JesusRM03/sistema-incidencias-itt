@@ -12,6 +12,9 @@ Se probó la rama de revisión con el esquema y los doce espacios ficticios del 
 | Playwright, aplicación compilada | 12 aprobadas con Chromium 156, Express y Caddy 2.11.2. El navegador confió en la raíz local para el origen HTTPS. |
 | Accesibilidad y tamaños | Las comprobaciones automáticas de axe de la suite pasaron. Se recorrieron nueve pantallas administrativas a 360, 768 y 1366 px y se comprobó el foco del menú con teclado. |
 | Reinicio de procesos | Tras detener y levantar Express y MySQL sobre los mismos datos, se recuperaron por HTTPS el folio cerrado, su historial y las fotos. Se compararon sus huellas SHA-256 antes y después. |
+| Docker Compose en GitHub | Se construyeron las imágenes, se inició la demo con HTTPS, se contaron doce espacios y se reiniciaron únicamente los volúmenes desechables. [Ejecución de GitHub Actions](https://github.com/JesusRM03/sistema-incidencias-itt/actions/runs/44213442576). |
+| Demostración pública en Railway | Se repitieron las cuatro pruebas móviles contra el dominio público. Las cuatro pasaron. Se imprimieron a PDF tres hojas carta y se decodificaron las doce etiquetas desde las páginas renderizadas. Cada QR identificó un espacio distinto al abrirlo con sesión. |
+| Reinicio de la aplicación pública | El mismo folio siguió cerrado, con ocho eventos y dos archivos con idénticas huellas SHA-256. |
 | Configuración del servidor | Pasaron las seis comprobaciones de `scripts/deployment-check.js` en el entorno probado, incluida la cuenta de ejecución de permisos limitados. |
 
 Entorno de las pruebas: Linux, Node.js 24.22.1 y Chromium sin interfaz gráfica. Se utilizaron bases exclusivas de demostración y pruebas. El navegador móvil fue emulado. Las fotos y las etiquetas que leyó el navegador fueron archivos de prueba. Las cifras de esta revisión corresponden a las suites ejecutadas en esta rama. Los informes anteriores del repositorio conservan su fecha y alcance.
@@ -33,7 +36,7 @@ Entorno de las pruebas: Linux, Node.js 24.22.1 y Chromium sin interfaz gráfica.
 | 11. Permisos | Pruebas de API con sesiones ficticias por rol, origen y token CSRF, activación con CAPTCHA y autorización del detalle y la imagen. Se comprobaron también los menús por rol. |
 | 12. Persistencia | La suite reinició el proceso de Express. Una segunda comprobación reinició también MySQL y abrió nuevamente el mismo reporte con la misma evidencia. |
 
-La impresión se comprobó hasta la selección de las etiquetas que recibe el diálogo del navegador. Quedan para el ensayo en sitio la hoja impresa, el enfoque de la cámara física, los permisos del teléfono, la instalación de la raíz local, la comunicación por el Wi-Fi del salón y, cuando haya un dominio público, el acceso por datos móviles. La instalación en un equipo Windows físico también requiere ensayo. No se tomaron mediciones de rendimiento en esta revisión.
+Se verificó el PDF de impresión emitido por el navegador. Quedan para el ensayo en sitio la legibilidad sobre papel, el enfoque de la cámara física, los permisos del teléfono, la instalación de la raíz de la alternativa local, la comunicación por el Wi-Fi del salón y la apertura desde una red celular real. La instalación en un equipo Windows físico también requiere ensayo. No se tomaron mediciones de rendimiento en esta revisión.
 
 ## Cotejo con el diccionario de datos
 
@@ -51,6 +54,6 @@ Se compararon las tablas y la secuencia de campos del diccionario del PDF con `s
 | `compose.demo.yaml`, `deploy/`, `scripts/demo*.js`, `.dockerignore`, `.gitattributes`, `.gitignore` | MySQL, API y HTTPS aislados, permisos por tabla, cuentas ficticias con claves privadas y reinicio con comprobación de los volúmenes de la demo. |
 | `scripts/restore.sh`, `scripts/load-test.js` | Restauración en destinos vacíos y uso de la clave de prueba entregada por el entorno. |
 | `tests/domain.test.js`, `tests/integration/`, `tests/browser/`, `playwright.config.js` | Pruebas de dominio, de API y persistencia y de navegador móvil con imágenes reales de prueba. |
-| `package*.json`, `README.md`, `docs/despliegue.md`, `docs/presentacion-movil-qr.md` | Biblioteca ZIP, comandos de demo, instalación y guion para la exposición. |
+| `.github/workflows/demo.yml`, `package*.json`, `README.md`, `docs/despliegue.md`, `docs/presentacion-movil-qr.md` | Pruebas automatizadas, biblioteca ZIP, comandos de demo, instalación y guion para la exposición. |
 
 Los comandos de desarrollo son `npm ci`, `npm run lint`, `npm test`, `npm run build`, `npm run test:integration` y `npm run test:e2e`. La integración necesita una cuenta con permisos **solo para las bases de pruebas** y la suite de navegador necesita la demo sembrada y la URL de origen confiable. Consulta la configuración de [despliegue y pruebas](despliegue.md) y la [guía de la demo](presentacion-movil-qr.md).

@@ -29,6 +29,22 @@ jobs:
         run: |
           printf 'REINICIAR itt-demo\n' | npm run demo:reset
           curl --retry 20 --retry-all-errors --retry-delay 2 --cacert /tmp/itt-demo.crt -fsS https://localhost:8443/api/salud
+      - name: Probar la API y la persistencia
+        run: |
+          docker run --rm --network itt-demo_default --env-file .env.demo --env DB_HOST=db --env PRIVATE_FILES=/app/var/evidencias --mount "type=bind,source=$GITHUB_WORKSPACE/tests,target=/app/tests,readonly" --volume itt-demo_evidence:/app/var/evidencias itt-incidencias-demo:local node --test tests/integration/api.test.js tests/integration/persistencia.test.js
+      - name: Probar el navegador con la raíz HTTPS de la demo
+        env:
+          ITT_ENV_FILE: .env.demo
+          NODE_EXTRA_CA_CERTS: /tmp/itt-demo.crt
+        run: |
+          npx playwright install --with-deps chromium
+          sudo apt-get install -y libnss3-tools
+          for certdb in "$HOME/.pki/nssdb" "${XDG_DATA_HOME:-$HOME/.local/share}/pki/nssdb"; do
+            mkdir -p "$certdb"
+            test -f "$certdb/cert9.db" || certutil -N --empty-password -d "sql:$certdb"
+            certutil -A -n itt-demo -t 'C,,' -i /tmp/itt-demo.crt -d "sql:$certdb"
+          done
+          npm run test:e2e
       - name: Diagnóstico de arranque sin credenciales
         if: failure()
         run: |

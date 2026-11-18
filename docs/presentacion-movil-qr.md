@@ -2,6 +2,12 @@
 
 Esta guía arranca la aplicación y MySQL 8.4 en la PC de la exposición. Utiliza seis usuarios ficticios y doce ubicaciones de ejemplo. El catálogo oficial requiere validación del Instituto. Cada teléfono usa el navegador y se conecta al mismo servidor que la computadora.
 
+## Entrar ahora desde el teléfono
+
+Abre [la demostración HTTPS](https://incidencias-demostracion.up.railway.app) en Chrome o Safari. El certificado público lo administra Railway. Puedes abrir el mismo enlace desde otro equipo. En el panel privado de Railway, entra al servicio **incidencias → Variables** y revela solo la variable del rol que vas a usar. Los usuarios y nombres de las variables aparecen en la sección 3. La nube y la PC generan contraseñas e inventarios QR independientes.
+
+Para el ensayo físico abre la demo con los datos móviles del teléfono, inicia sesión con `alumno@toluca.tecnm.mx`, escanea una etiqueta impresa desde ese mismo despliegue y registra una foto. Conserva el folio para consultarlo en la computadora. La URL depende del saldo y vigencia del Trial. La presentación en la red local usa la instalación siguiente.
+
 ## 1. Instalar en Windows
 
 Instala Git, Node.js 24 y Docker Desktop con el motor de contenedores Linux (WSL 2). Abre Docker Desktop y espera a que indique que el motor está en ejecución. En PowerShell:
@@ -98,7 +104,23 @@ Lee el aviso y escribe literalmente `REINICIAR itt-demo`. El script comprueba el
 | Cierre | Un administrador independiente aprueba. El alumno comprueba el resultado y confirma el cierre. | Muestra **Cerrado**, el historial y el aviso individual. La opción de inconformidad permite reabrir una solución. |
 | Reporte | Administración busca el folio en **Reportes** y exporta el CSV. | Contrasta el folio, estado y ubicación con el registro original. |
 
-## 7. Publicación en Internet
+## 7. Repetir las pruebas automatizadas en la demo local
+
+En la PC de pruebas, la demo debe estar iniciada y el certificado instalado. Estos comandos escriben incidencias de prueba en `itt-demo`. Para volver a los doce folios originales utiliza la sección 5. Abre PowerShell dentro de la carpeta del proyecto.
+
+```powershell
+npm ci
+npm run lint
+npm test
+npm run build
+docker run --rm --network itt-demo_default --env-file .env.demo --env DB_HOST=db --env PRIVATE_FILES=/app/var/evidencias --mount "type=bind,source=$((Resolve-Path .\tests).Path),target=/app/tests,readonly" --volume itt-demo_evidence:/app/var/evidencias itt-incidencias-demo:local node --test tests/integration/api.test.js tests/integration/persistencia.test.js
+npx playwright install chromium
+$env:ITT_ENV_FILE = ".env.demo"
+$env:NODE_EXTRA_CA_CERTS = (Resolve-Path .\certificados-demo\ITT-demo.crt).Path
+npm run test:e2e
+```
+
+## 8. Publicación en Internet
 
 La IP del Wi-Fi sirve dentro de esa red. Para datos móviles se requiere un origen público HTTPS estable. En Railway el despliegue usa un proyecto académico separado: un servicio web construido con `deploy/Dockerfile`, MySQL 8.4 en la red privada y volúmenes persistentes para la base y `/app/var/evidencias`. Solo el servicio web necesita dominio público. Configura `APP_ORIGIN` con ese dominio exacto, `NODE_ENV=production`, `BIND_HOST=0.0.0.0`, `COOKIE_SECURE=true` y el puerto de la plataforma. Activa `BEHIND_PROXY=true` cuando el único acceso provenga del proxy de confianza. Carga el esquema con la cuenta de migración y utiliza otra de permisos limitados para la API. Genera secretos privados para ese entorno y emite las etiquetas con ese origen.
 
