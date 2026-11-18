@@ -1,3 +1,4 @@
+import { eventTitle } from "../eventTitles.js";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell, Check } from "lucide-react";
@@ -30,7 +31,7 @@ export function Notifications() {
                 <div>
                   <Link to={"/incidencias/" + n.incidencia_id + "#evento-" + n.evento_id}>
                     <strong>
-                      {n.tipo} · {n.folio}
+                      {eventTitle(n.tipo)} · {n.folio}
                     </strong>
                   </Link>
                   <p>{date(n.creado_en)}</p>

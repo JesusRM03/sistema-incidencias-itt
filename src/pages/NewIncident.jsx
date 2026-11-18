@@ -36,7 +36,10 @@ export function NewIncident({ userId }) {
     let live = true;
     readDraft(id)
       .then((value) => {
-        if (live) setInitial({ value: value || emptyDraft(), warning: "" });
+        if (live) setInitial({
+          value: value || emptyDraft(),
+          warning: value?.savedAt === null ? storageWarning : "",
+        });
       })
       .catch(() => {
         if (live) setInitial({ value: emptyDraft(), warning: storageWarning });
@@ -104,6 +107,8 @@ function IncidentForm({ id, initial, catalogs }) {
   const [draft, setDraft] = useState(initial.value),
     latest = useRef(initial.value),
     [warning, setWarning] = useState(initial.warning),
+    [savingDraft, setSavingDraft] = useState(false),
+    [savedAt, setSavedAt] = useState(initial.warning ? null : initial.value.savedAt),
     [error, setError] = useState(""),
     [dup, setDup] = useState([]),
     [busy, setBusy] = useState(false),
@@ -118,12 +123,23 @@ function IncidentForm({ id, initial, catalogs }) {
     fromMap = params.get("espacio");
   const update = useCallback(
     (changes) => {
-      const value = { ...latest.current, ...changes };
+      const value = { ...latest.current, ...changes, savedAt: Date.now() };
       latest.current = value;
       setDraft(value);
-      return saveDraft(id, value, "photos" in changes).catch(() =>
-        setWarning(storageWarning),
-      );
+      setSavingDraft(true);
+      return saveDraft(id, value)
+        .then(() => {
+          if (latest.current !== value) return;
+          setWarning("");
+          setSavedAt(value.savedAt);
+          setSavingDraft(false);
+        })
+        .catch(() => {
+          if (latest.current !== value) return;
+          setWarning(storageWarning);
+          setSavedAt(null);
+          setSavingDraft(false);
+        });
     },
     [id],
   );
@@ -317,10 +333,15 @@ function IncidentForm({ id, initial, catalogs }) {
           </fieldset>
           <ErrorBox message={error || warning} />
           {busy && progress !== null && <p role="status">{progress < 100 ? `Enviando fotografías · ${progress}%` : "Fotografías enviadas. Guardando el reporte…"}</p>}
-          {draft.pending && !busy && (
-            <p role="status">
-              Queda pendiente la confirmación del servidor. Reintenta para
-              recuperar el folio con los mismos datos.
+          {!busy && (
+            <p role="status" className="draft-status">
+              {draft.pending
+                ? "Falta confirmar el registro. Reintenta para recuperar el folio con los mismos datos."
+                : savingDraft
+                  ? "Guardando borrador…"
+                  : savedAt
+                    ? "Borrador guardado en esta pestaña a las " + new Date(savedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })
+                    : ""}
             </p>
           )}
           <div className="form-actions">

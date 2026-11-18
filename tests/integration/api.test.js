@@ -667,3 +667,21 @@ test("El bloqueo por cuenta no se comparte por IP ni se prolonga al reintentar",
   await q(pool, "UPDATE intento_acceso SET ocurrido_en=UTC_TIMESTAMP()-INTERVAL 16 MINUTE WHERE cuenta_hmac=? AND resultado='Fallido'", [account]);
   assert.equal((await c.call("/acceso","POST",{correo})).status,401);
 });
+
+test("La bandeja ordena globalmente por prioridad y después por antigüedad", async () => {
+  const {data: defaultList} = await tech.call("/incidencias");
+  const {data: prioritized} = await tech.call("/incidencias?orden=prioridad");
+  const {data: oldest} = await tech.call("/incidencias?orden=antigua");
+  const byAge = (a, b) => a.creada_en.localeCompare(b.creada_en) || a.id - b.id;
+  const priorities = new Map([["Alta", 1], ["Media", 2], ["Baja", 3]]);
+  const byPriority = (a, b) => (priorities.get(a.prioridad) || 4) - (priorities.get(b.prioridad) || 4) || byAge(a, b);
+  const listAll = [...defaultList.items];
+  for (let page = 2; page <= defaultList.paginas; page++) {
+    const {data} = await tech.call("/incidencias?pagina=" + page);
+    listAll.push(...data.items);
+  }
+  assert.ok(listAll.length > 1);
+  assert.equal(prioritized.total, defaultList.total);
+  assert.deepEqual(prioritized.items, listAll.toSorted(byPriority).slice(0, 20));
+  assert.deepEqual(oldest.items, listAll.toSorted(byAge).slice(0, 20));
+});

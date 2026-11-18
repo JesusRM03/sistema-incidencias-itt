@@ -112,6 +112,7 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
       /desde la vista móvil/,
     );
     await expect(button(alumno, "Quitar captura.png")).toBeVisible();
+    await expect(alumno.getByText(/Borrador guardado en esta pestaña/)).toBeVisible();
     // Drop only the response after the real API has committed the report.
     await alumno.route(
       "**/api/incidencias",
@@ -124,6 +125,7 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
     );
     await button(alumno, "Registrar incidencia").click();
     await expect(button(alumno, "Reintentar envío")).toBeVisible();
+    await expect(alumno.getByText(/Falta confirmar el registro/)).toBeVisible();
     await alumno.reload();
     await button(alumno, "Reintentar envío").click();
     await expect(
@@ -163,6 +165,11 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
     await expect(admin.locator(".page-head .badge")).toHaveText("En proceso");
     await expect(admin.getByRole("status").filter({hasText:"Incidencia asignada a Técnico demo."})).toBeVisible();
     await login(tecnico, "tecnico", detail);
+    const visibility = tecnico.getByLabel("Visibilidad");
+    await visibility.selectOption("Interna");
+    await expect(visibility).toHaveAccessibleDescription("Visible para administración y el técnico con asignación vigente.");
+    await visibility.selectOption("Pública");
+    await expect(visibility).toHaveAccessibleDescription("También podrá leerla la persona que reportó la falla.");
     for (const [kind, content] of [
       ["Diagnóstico", "Se revisó la alimentación."],
       ["Avance", "Se probó el componente."],
@@ -189,6 +196,12 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
     await tecnico.keyboard.press("Escape");
     await expect(gallery).toBeHidden();
     await admin.reload();
+    const review = admin.locator("#revisar");
+    await expect(review.getByRole("heading", {name:"Reporte inicial"})).toBeVisible();
+    await review.getByRole("button", {name:"Solución", exact:true}).click();
+    await expect(review.getByText("Se concluyó la reparación y la prueba.")).toBeVisible();
+    await expect(review.getByRole("heading", {name:"Fotografías del diagnóstico"})).toBeVisible();
+    await expect(review.getByRole("button", {name:"Ampliar fotografía 1 · Diagnóstico"})).toBeVisible();
     await admin
       .getByLabel("Motivo o verificación")
       .fill("Se comprobó el diagnóstico y la reparación.");
@@ -203,7 +216,7 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
     await button(alumno, "Confirmar acción").click();
     await expect(alumno.locator(".page-head .badge")).toHaveText("Cerrado");
     await expect(
-      alumno.locator(".timeline").getByText("cerrar", { exact: true }),
+      alumno.locator(".timeline").getByText(/Confirmó el cierre/),
     ).toBeVisible();
     await menu(alumno, "Notificaciones");
     const notice = alumno
@@ -374,6 +387,10 @@ test("Mapa con salones superpuestos, menú por teclado y borrador al volver de u
     await expect(page.locator("html")).toHaveAttribute("data-theme", "bosque");
     await theme.selectOption("normal");
     await menu(page, "Mapa del campus");
+    await page.getByRole("textbox", {name:"Buscar salón"}).fill("computo 2");
+    await page.getByRole("list", {name:"Salones encontrados"}).getByRole("button", {name:/T-02/}).click();
+    await expect(page.getByRole("button", {name:/Elegir edificio T ·/})).toHaveAttribute("aria-pressed","true");
+    await expect(page.getByRole("link", {name:"Reportar en T-02"})).toBeVisible();
     await page
       .getByRole("button", { name: /Elegir edificio T ·/ })
       .click();
@@ -446,4 +463,15 @@ test("Atajo de escaneo y guía al primer campo pendiente", async ({page}) => {
   await button(page,"Registrar incidencia").click();
   await expect(page.getByLabel("Tipo de falla",{exact:true})).toBeFocused();
   await expect(page.getByRole("alert")).toContainText("Elige el tipo de falla.");
+});
+
+test("Técnico puede cambiar el orden de su bandeja", async ({page}) => {
+  await login(page,"tecnico","/mis-incidencias");
+  const sort = page.getByLabel("Ordenar incidencias");
+  await sort.selectOption("prioridad");
+  await expect(page).toHaveURL(/orden=prioridad/);
+  await sort.selectOption("antigua");
+  await expect(page).toHaveURL(/orden=antigua/);
+  await page.reload();
+  await expect(sort).toHaveValue("antigua");
 });

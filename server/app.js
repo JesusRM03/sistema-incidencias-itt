@@ -962,7 +962,12 @@ function listWhere(u, params) {
   }
   return { sql: where.length ? " WHERE " + where.join(" AND ") : "", args };
 }
+const incidentSort = new Map([
+  ["prioridad", "CASE i.prioridad WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 WHEN 'Baja' THEN 3 ELSE 4 END, i.creada_en ASC, i.id ASC"],
+  ["antigua", "i.creada_en ASC, i.id ASC"],
+]);
 api.get("/incidencias", async (req, res) => {
+  const order = incidentSort.get(req.query.orden) || "i.creada_en DESC,i.id DESC";
   const w = listWhere(req.user, req.query),
     page = Math.max(
       1,
@@ -973,7 +978,7 @@ api.get("/incidencias", async (req, res) => {
     pool,
     listSelect +
       w.sql +
-      " ORDER BY i.creada_en DESC,i.id DESC LIMIT 20 OFFSET " +
+      " ORDER BY " + order + " LIMIT 20 OFFSET " +
       (page - 1) * limit,
     w.args,
   );
