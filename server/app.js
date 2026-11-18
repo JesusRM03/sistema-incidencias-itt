@@ -345,10 +345,15 @@ api.post("/acceso", async (req, res) => {
     source = hmac(req.ip);
   const result = await tx(
     async (c) => {
-      const [fail] = await q(
+      const failures = await q(
         c,
-        "SELECT COUNT(*) n FROM intento_acceso WHERE ocurrido_en>DATE_SUB(UTC_TIMESTAMP(),INTERVAL 15 MINUTE) AND resultado<>'Correcto' AND (cuenta_hmac=? OR origen_hmac=?)",
-        [account, source],
+        `SELECT CEIL(TIMESTAMPDIFF(MICROSECOND, UTC_TIMESTAMP(6),
+                  ocurrido_en + INTERVAL 15 MINUTE) / 1000000) AS remaining
+           FROM intento_acceso
+          WHERE cuenta_hmac=? AND resultado IN ('Fallido','CAPTCHA inválido')
+            AND ocurrido_en > UTC_TIMESTAMP(6) - INTERVAL 15 MINUTE
+          ORDER BY ocurrido_en DESC LIMIT 5`,
+        [account],
       );
       const [u] = await q(
         c,
@@ -359,11 +364,13 @@ api.post("/acceso", async (req, res) => {
         msg = "",
         rid = null,
         outcome = "Correcto";
-      if (fail.n >= 5) {
+      if (failures.length === 5) {
         status = 429;
-        msg = "Demasiados intentos. Espera 15 minutos.";
+        const seconds = Number(failures[4].remaining);
+        const minutes = Math.ceil(seconds / 60);
+        msg = `Demasiados intentos en esta cuenta. Vuelve a intentar en ${minutes} ${minutes === 1 ? "minuto" : "minutos"}.`;
         outcome = "Limitado";
-      } else if (fail.n >= 3) {
+      } else if (failures.length >= 3) {
         const captcha = await consumeCaptcha(c, req, "Acceso");
         rid = captcha.rid;
         if (!captcha.ok) {
@@ -393,7 +400,8 @@ api.post("/acceso", async (req, res) => {
         `INSERT INTO intento_acceso(usuario_id,reto_captcha_id,cuenta_hmac,origen_hmac,resultado,ocurrido_en) VALUES(?,?,?,?,?,${nowSQL})`,
         [u?.id || null, rid, account, source, outcome],
       );
-      if (status !== 200) return { status, msg, captcha: fail.n >= 2 };
+      if (status !== 200)
+        return { status, msg, captcha: failures.length >= 2, retryAfter: status === 429 ? Number(failures[4].remaining) : null };
       const raw = token();
       await q(
         c,
@@ -402,8 +410,9 @@ api.post("/acceso", async (req, res) => {
       );
       return { raw, usuario: publicProfile(u) };
     },
-    "auth:" + source.toString("hex").slice(0, 32),
+    "auth:" + account.toString("hex").slice(0, 32),
   );
+  if (result.retryAfter) res.set("Retry-After", String(result.retryAfter));
   if (result.status)
     return res
       .status(result.status)

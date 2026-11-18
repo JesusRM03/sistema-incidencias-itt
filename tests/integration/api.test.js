@@ -647,3 +647,23 @@ test("Estadísticas combinadas de edificio y periodo concuerdan con los detalles
   assert.equal(data.porEdificio.length, 1);
   assert.equal(data.porPeriodo.length, 1);
 });
+
+test("El bloqueo por cuenta no se comparte por IP ni se prolonga al reintentar", async () => {
+  const correo = "prueba-" + randomBytes(8).toString("hex") + "@toluca.tecnm.mx";
+  const account = hmac(correo);
+  const [{ origen_hmac: originHash }] = await q(pool,
+    "SELECT origen_hmac FROM intento_acceso WHERE cuenta_hmac=? AND resultado='Correcto' ORDER BY id DESC LIMIT 1",
+    [hmac("admin@toluca.tecnm.mx")]);
+  for (let i = 0; i < 5; i++)
+    await q(pool, "INSERT INTO intento_acceso(cuenta_hmac,origen_hmac,resultado,ocurrido_en) VALUES(?,?,'Fallido',UTC_TIMESTAMP() - INTERVAL 13 MINUTE)", [account, originHash]);
+  const c = new Client();
+  for (let i = 0; i < 6; i++) {
+    const response = await c.call("/acceso", "POST", { correo });
+    assert.equal(response.status, 429);
+    assert.match(response.data.message, /[12] minutos?\./);
+  }
+  await new Client().login("admin");
+  await new Client().login("tecnico");
+  await q(pool, "UPDATE intento_acceso SET ocurrido_en=UTC_TIMESTAMP()-INTERVAL 16 MINUTE WHERE cuenta_hmac=? AND resultado='Fallido'", [account]);
+  assert.equal((await c.call("/acceso","POST",{correo})).status,401);
+});
