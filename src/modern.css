@@ -1976,3 +1976,37 @@ tbody tr:hover { background: #F8FAFC; }
 }
 
 .map-options .button { margin:0 .35rem .35rem 0; }
+
+:root[data-theme="oscuro"] {
+  color-scheme:dark;
+  --bg:#101824; --surface:#1b293a; --surface-2:#26384b; --border:#53647a; --border-soft:#34465c;
+  --text:#eff5ff; --text-muted:#c2cedd; --text-subtle:#b4c4d7;
+  --util-bg:#26354a; --util-text:#f1f5fc; --util-border:#61748e;
+  --navy:#112445; --navy-dark:#0c192c; --navy-mid:#193660;
+}
+:root[data-theme="bosque"] {
+  --bg:#f0f6ef; --surface:#fffffa; --surface-2:#e4f1e8; --border:#b4cbb9; --border-soft:#d8e6d8;
+  --text:#18392e; --text-muted:#456053; --text-subtle:#496657; --navy:#174836; --navy-mid:#226044;
+  --navy-dark:#103827; --navy-active:#287450; --blue:#215c48; --blue-dark:#194836;
+  --orange:#9e3d18; --orange-dark:#813117;
+}
+[data-theme="oscuro"] :is(.bottom-guides > a,tbody tr,.notification.unread):hover {background:var(--surface-2)}
+[data-theme="oscuro"] .notification.unread {background:var(--surface-2)}
+[data-theme="oscuro"] :is(.folio,.text-button,.tab.active,.eyebrow) {color:#a6c9ff}
+.theme-picker,.fault-label {display:inline-flex;align-items:center;gap:.45rem}
+.theme-picker {margin-left:auto}
+.theme-picker select {width:auto;min-height:38px;padding:.35rem .5rem;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px}
+.login-theme {display:flex;justify-content:flex-end;margin-bottom:.8rem}
+.fault-icon {color:var(--text-muted);flex:none}
+small.fault-label {display:flex;gap:.35rem;margin:.3rem 0}
+.fault-choices,.room-list {display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0 1rem}
+.fault-choices [aria-pressed="true"],.room-list [aria-pressed="true"] {background:var(--navy);color:white}
+.fault-choices [aria-pressed="true"] .fault-icon {color:white}
+.map-details summary {cursor:pointer;font-weight:700}
+.campus-plan {position:relative;max-width:34rem;margin:1rem auto;background:var(--surface-2);border-radius:12px;overflow:hidden}
+.campus-plan img {display:block;width:100%;height:auto}
+.campus-pin {position:absolute;translate:-50% -50%;border:2px solid white;border-radius:9px;background:#183764;color:white;min-width:30px;min-height:30px;font-weight:700;box-shadow:0 2px 6px #0007;cursor:pointer;padding:2px 5px}
+.campus-pin[aria-pressed="true"] {background:#9c3c0f;z-index:1}
+.campus-pin:focus-visible {outline:3px solid #ffcf41;z-index:2}
+.campus-rooms:not(:empty) {padding:1rem;background:var(--surface-2);border-radius:12px;scroll-margin:5rem}
+.campus-rooms h3 {margin:0 0 .7rem}

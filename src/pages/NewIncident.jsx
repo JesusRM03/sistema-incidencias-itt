@@ -1,3 +1,4 @@
+import { FaultIcon } from "../components/FaultIcon.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, ScanLine } from "lucide-react";
@@ -246,7 +247,7 @@ function IncidentForm({ id, initial, catalogs }) {
                 <span>02</span> Cuéntanos qué sucede
               </h2>
               <Select
-                label="Tipo de falla"
+                label={<span className="fault-label"><FaultIcon name={catalogs.tipo_falla?.find((t) => String(t.id) === String(draft.type))?.nombre} />Tipo de falla</span>}
                 value={draft.type}
                 onChange={(e) => select({ type: e.target.value })}
                 required
@@ -258,6 +259,9 @@ function IncidentForm({ id, initial, catalogs }) {
                   </option>
                 ))}
               </Select>
+              <div className="fault-choices" role="group" aria-label="Categorías de falla">
+                {catalogs.tipo_falla.map((t) => <button type="button" key={t.id} className="button small" aria-pressed={String(draft.type) === String(t.id)} onClick={() => select({type:String(t.id)})}><FaultIcon name={t.nombre} />{t.nombre}</button>)}
+              </div>
               <Textarea
                 label="Descripción"
                 name="descripcion"

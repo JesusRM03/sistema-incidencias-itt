@@ -1,3 +1,4 @@
+import { FaultIcon } from "../components/FaultIcon.jsx";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, ArrowLeft, ArrowRight } from "lucide-react";
@@ -40,7 +41,7 @@ export function FilterBar({
         ))}
       </Select>
       <Select
-        label="Tipo de falla"
+        label={<span className="fault-label"><FaultIcon name={catalogs?.tipo_falla?.find((t) => String(t.id) === String(filters.tipo_falla_id))?.nombre} />Tipo de falla</span>}
         value={filters.tipo_falla_id || ""}
         onChange={(e) => update("tipo_falla_id", e.target.value)}
       >

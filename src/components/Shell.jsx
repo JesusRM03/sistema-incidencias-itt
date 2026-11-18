@@ -1,3 +1,4 @@
+import { ThemePicker } from "./ThemePicker.jsx";
 import { useState, useEffect, useRef } from "react";
 import {
   Routes,
@@ -190,6 +191,7 @@ export function Shell({ user, onLogout }) {
             <ChevronRight size={14} />
             <strong>Infraestructura</strong>
           </div>
+          <ThemePicker />
           <span className="top-date">
             {new Date().toLocaleDateString("es-MX", {
               timeZone: "America/Mexico_City",

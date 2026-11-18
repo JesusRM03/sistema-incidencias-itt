@@ -29,7 +29,7 @@ Para desarrollo: API en el puerto 3001, `npm run dev` en 5173 y APP_ORIGIN=http:
 
 Para la exposición en Windows y teléfono utiliza [la guía de demostración HTTPS](docs/presentacion-movil-qr.md). Incluye configuración, credenciales locales, etiquetas individuales y por lote, reinicio aislado y guion por rol. El configurador guarda contraseñas distintas por instalación en el archivo privado `.env.demo`.
 
-La [demostración pública de noviembre](https://incidencias-demostracion.up.railway.app) utiliza el Trial de Railway y los doce espacios ficticios.
+La [demostración pública de noviembre](https://incidencias-demostracion.up.railway.app) utiliza el Trial de Railway y los veinticuatro espacios ficticios.
 
 La demo contiene doce espacios ficticios. La base `incidencias_itt_demo` y sus fotografías tienen volúmenes propios. El catálogo institucional requiere datos validados por el ITT.
 

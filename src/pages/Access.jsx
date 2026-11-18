@@ -1,3 +1,4 @@
+import { ThemePicker } from "../components/ThemePicker.jsx";
 import { useState, useEffect, useCallback } from "react";
 import { ArrowRight, RefreshCw, ShieldCheck } from "lucide-react";
 import { api, post } from "../api";
@@ -111,6 +112,7 @@ export function Login({ onLogin }) {
       </aside>
       <main className="login-main">
         <div className="login-form">
+          <div className="login-theme"><ThemePicker /></div>
           <span className="mini-label">
             <span className="green-dot" /> Portal de infraestructura
           </span>
