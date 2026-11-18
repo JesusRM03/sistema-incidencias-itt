@@ -1944,3 +1944,19 @@ tbody tr:hover { background: #F8FAFC; }
   .sidebar           { visibility: hidden; }
   .sidebar.open      { visibility: visible; }
 }
+
+/* Etiquetas QR por aula: visualización responsiva e impresión */
+.qr-batch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-top: 18px; }
+.qr-batch-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid #d8dee8; border-radius: 12px; background: #fff; color: #111827; break-inside: avoid; }
+.qr-batch-card img { width: 100%; max-width: 200px; align-self: center; }
+.qr-batch-card p { margin: 0; font-size: 13px; color: #374151; }
+.qr-batch-card a { overflow-wrap: anywhere; }
+.qr-scanner input[type="file"] { display: block; max-width: 100%; margin-top: 8px; }
+@media print {
+  @page { size: A4; margin: 13mm; }
+  body { background: white !important; }
+  .sidebar, .topbar, .page-head, .tabs, .page-footer, .qr-batch-grid ~ *, .qr-batch-card a, .qr-batch-card small, button, .qr-label, .page-head + .panel { display: none !important; }
+  .app-shell, .workspace, .main-content, .panel { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
+  .qr-batch-grid { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 10mm; }
+  .qr-batch-card { border: 1px solid #555; color: black; }
+}
