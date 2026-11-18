@@ -76,13 +76,16 @@ before(async () => {
   other = await new Client().login("otro");
 });
 after(async () => {
-  await fs.mkdir("artifacts", { recursive: true });
-  await fs.writeFile(
-    "artifacts/integration-context.json",
-    JSON.stringify({ inc }),
-  );
-  await new Promise((r) => server.close(r));
-  await pool.end();
+  try {
+    await fs.mkdir("artifacts", { recursive: true });
+    await fs.writeFile(
+      "artifacts/integration-context.json",
+      JSON.stringify({ inc }),
+    );
+  } finally {
+    await new Promise((r) => server.close(r));
+    await pool.end();
+  }
 });
 test("Base relacional contiene las 19 tablas", async () => {
   const rows = await q(pool, "SHOW TABLES");

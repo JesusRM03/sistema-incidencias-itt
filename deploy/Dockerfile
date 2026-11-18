@@ -13,7 +13,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
 COPY --from=build /app/scripts ./scripts
-RUN mkdir -p /app/var/evidencias && chown node:node /app/var/evidencias
+RUN mkdir -p /app/var/evidencias /app/artifacts && chown node:node /app/var/evidencias /app/artifacts
 COPY --chmod=0555 deploy/start.sh /usr/local/bin/itt-start
 USER node
 ENTRYPOINT ["/usr/local/bin/itt-start"]
