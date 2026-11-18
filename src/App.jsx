@@ -1,18 +1,25 @@
 import "./modern.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { api } from "./api";
 import { ErrorBox, Loading } from "./components/ui.jsx";
 import { Login } from "./pages/Access.jsx";
 import { Shell } from "./components/Shell.jsx";
 
+function subscribeNetwork(change) {
+  window.addEventListener("online", change);
+  window.addEventListener("offline", change);
+  return () => {
+    window.removeEventListener("online", change);
+    window.removeEventListener("offline", change);
+  };
+}
 function Root() {
+  const online = useSyncExternalStore(subscribeNetwork, () => navigator.onLine);
   const [user, setUser] = useState(null),
     [ready, setReady] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("qr")) sessionStorage.setItem("itt_qr", params.get("qr"));
     api("/sesion")
       .then((d) => setUser(d.usuario))
       .catch((e) => {
@@ -24,12 +31,26 @@ function Root() {
     return () => window.removeEventListener("itt-session-expired", expire);
   }, []);
   if (!ready) return <Loading error={error} />;
-  return user ? (
-    <Shell user={user} onLogout={() => setUser(null)} />
-  ) : (
+  return (
     <>
-      <ErrorBox message={error} />
-      <Login onLogin={setUser} />
+      {!online && (
+        <p className="network-banner" role="status">
+          Sin conexión. Podrás enviar los cambios cuando regrese la red.
+        </p>
+      )}
+      {user ? (
+        <Shell user={user} onLogout={() => setUser(null)} />
+      ) : (
+        <>
+          <ErrorBox message={error} />
+          <Login
+            onLogin={(profile) => {
+              setError("");
+              setUser(profile);
+            }}
+          />
+        </>
+      )}
     </>
   );
 }

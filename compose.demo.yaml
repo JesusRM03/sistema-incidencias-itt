@@ -1,0 +1,77 @@
+name: itt-demo
+services:
+  db:
+    build:
+      context: .
+      dockerfile: deploy/mysql.Dockerfile
+    image: itt-mysql-demo:local
+    environment:
+      MYSQL_DATABASE: incidencias_itt_demo
+      MYSQL_USER: itt_demo
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Primero ejecuta demo:config}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Falta la configuración privada}
+      RUNTIME_PASSWORD: ${RUNTIME_PASSWORD:?Falta la configuración privada}
+    volumes:
+      - database:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=tcp -h 127.0.0.1 -u "$${MYSQL_USER}" "$${MYSQL_DATABASE}" -Nse "SELECT id FROM rol WHERE id=3" | grep -qx 3']
+      interval: 3s
+      timeout: 3s
+      retries: 60
+  seed:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: itt-incidencias-demo:local
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      DB_HOST: db
+      DB_NAME: incidencias_itt_demo
+      DB_USER: itt_demo
+      DB_PASSWORD: ${DB_PASSWORD}
+      ALLOW_DEMO: "true"
+      DEMO_PASSWORD_ADMIN: ${DEMO_PASSWORD_ADMIN}
+      DEMO_PASSWORD_SUPERVISOR: ${DEMO_PASSWORD_SUPERVISOR}
+      DEMO_PASSWORD_TECNICO: ${DEMO_PASSWORD_TECNICO}
+      DEMO_PASSWORD_ALUMNO: ${DEMO_PASSWORD_ALUMNO}
+      DEMO_PASSWORD_DOCENTE: ${DEMO_PASSWORD_DOCENTE}
+      DEMO_PASSWORD_OTRO: ${DEMO_PASSWORD_OTRO}
+    command: ["node", "scripts/demo.js", "--if-empty"]
+  app:
+    pull_policy: never
+    image: itt-incidencias-demo:local
+    depends_on:
+      seed: {condition: service_completed_successfully}
+    environment:
+      NODE_ENV: production
+      BIND_HOST: 0.0.0.0
+      BEHIND_PROXY: "true"
+      COOKIE_SECURE: "true"
+      APP_ORIGIN: ${APP_ORIGIN}
+      APP_SECRET: ${APP_SECRET}
+      DB_HOST: db
+      DB_NAME: incidencias_itt_demo
+      DB_USER: itt_app
+      DB_PASSWORD: ${RUNTIME_PASSWORD}
+      PRIVATE_FILES: /app/var/evidencias
+    volumes:
+      - evidence:/app/var/evidencias
+  https:
+    image: caddy:2
+    depends_on:
+      - app
+    ports:
+      - "${HTTPS_PORT}:${HTTPS_PORT}"
+    environment:
+      DEMO_HOST: ${DEMO_HOST}
+      HTTPS_PORT: ${HTTPS_PORT}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls-data:/data
+volumes:
+  database:
+    labels: {mx.itt.demo.disposable: "true"}
+  evidence:
+    labels: {mx.itt.demo.disposable: "true"}
+  tls-data: {}

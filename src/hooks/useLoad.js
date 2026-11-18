@@ -2,24 +2,21 @@ import { useState, useEffect } from "react";
 import { api } from "../api";
 
 export function useLoad(path) {
-  const [data, setData] = useState(null),
-    [error, setError] = useState(""),
+  const [result, setResult] = useState(null),
     [tick, setTick] = useState(0);
   useEffect(() => {
-    let live = true;
-    api(path)
-      .then((d) => {
-        if (live) {
-          setData(d);
-          setError("");
-        }
-      })
+    const controller = new AbortController();
+    api(path, { signal: controller.signal })
+      .then((data) => setResult({ path, data, error: "" }))
       .catch((e) => {
-        if (live) setError(e.message);
+        if (!controller.signal.aborted)
+          setResult({ path, data: null, error: e.message });
       });
-    return () => {
-      live = false;
-    };
+    return () => controller.abort();
   }, [path, tick]);
-  return { data, error, reload: () => setTick((n) => n + 1) };
+  return {
+    data: result?.path === path ? result.data : null,
+    error: result?.path === path ? result.error : "",
+    reload: () => setTick((n) => n + 1),
+  };
 }

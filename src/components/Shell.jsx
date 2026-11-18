@@ -1,5 +1,12 @@
-import { useState } from "react";
-import { Routes, Route, NavLink, Link, Navigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import {
+  Routes,
+  Route,
+  NavLink,
+  Link,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -29,9 +36,40 @@ import { Catalogs } from "../pages/Catalogs.jsx";
 import { Audit } from "../pages/Audit.jsx";
 
 export function Shell({ user, onLogout }) {
+  const location = useLocation();
+  const opener = useRef(null),
+    sidebar = useRef(null);
   const [menu, setMenu] = useState(false),
     [logoutError, setLogoutError] = useState("");
   const admin = user.rol_id === 3;
+  useEffect(() => {
+    if (!menu) return;
+    const links = sidebar.current.querySelectorAll("a,button");
+    links[0]?.focus();
+    function keydown(e) {
+      if (e.key === "Escape") setMenu(false);
+      if (e.key !== "Tab") return;
+      if (e.shiftKey && document.activeElement === links[0]) {
+        e.preventDefault();
+        links[links.length - 1].focus();
+      }
+      if (!e.shiftKey && document.activeElement === links[links.length - 1]) {
+        e.preventDefault();
+        links[0].focus();
+      }
+    }
+    const onResize = () => {
+      if (window.innerWidth > 800) setMenu(false);
+    };
+    window.addEventListener("resize", onResize);
+    document.addEventListener("keydown", keydown);
+    const trigger = opener.current;
+    return () => {
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("keydown", keydown);
+      trigger?.focus();
+    };
+  }, [menu]);
   const links = [
     ["/dashboard", "Resumen", LayoutDashboard],
     [
@@ -64,8 +102,12 @@ export function Shell({ user, onLogout }) {
       <a className="skip-link" href="#contenido">
         Ir al contenido
       </a>
-      <aside className={"sidebar " + (menu ? "open" : "")}>
-        <Link className="brand" to="/dashboard">
+      <aside
+        id="menu-itt"
+        ref={sidebar}
+        className={"sidebar " + (menu ? "open" : "")}
+      >
+        <Link className="brand" to="/dashboard" onClick={() => setMenu(false)}>
           <img src={logo} alt="Escudo ITT" />
           <div>
             <strong>
@@ -74,6 +116,14 @@ export function Shell({ user, onLogout }) {
             <small>Gestión de incidencias</small>
           </div>
         </Link>
+        {menu && (
+          <button
+            className="text-button drawer-close"
+            onClick={() => setMenu(false)}
+          >
+            Cerrar menú
+          </button>
+        )}
         <p className="nav-label">ESPACIO DE TRABAJO</p>
         <nav aria-label="Navegación principal">
           {links.map(([url, label, Icon]) => (
@@ -119,15 +169,19 @@ export function Shell({ user, onLogout }) {
         <button
           className="menu-scrim"
           onClick={() => setMenu(false)}
-          aria-label="Cerrar menú"
+          tabIndex={-1}
+          aria-label="Cerrar panel de navegación"
         />
       )}
-      <div className="workspace">
+      <div className="workspace" inert={menu}>
         <header className="topbar">
           <div className="row">
             <button
               className="icon-button mobile-menu"
               onClick={() => setMenu(!menu)}
+              ref={opener}
+              aria-controls="menu-itt"
+              aria-expanded={menu}
               aria-label="Abrir menú"
             >
               <Menu size={22} />
@@ -152,7 +206,10 @@ export function Shell({ user, onLogout }) {
               path="/mis-incidencias"
               element={<Incidents user={user} />}
             />
-            <Route path="/nueva-incidencia" element={<NewIncident />} />
+            <Route
+              path="/nueva-incidencia"
+              element={<NewIncident key={user.id} userId={user.id} />}
+            />
             <Route path="/incidencias/:id" element={<Detail user={user} />} />
             <Route path="/mapa" element={<CampusMap />} />
             <Route path="/notificaciones" element={<Notifications />} />
@@ -172,7 +229,19 @@ export function Shell({ user, onLogout }) {
               path="/auditoria"
               element={admin ? <Audit /> : <Navigate to="/dashboard" />}
             />
-            <Route path="*" element={<Navigate to={sessionStorage.getItem("itt_qr") ? "/nueva-incidencia" : "/dashboard"} replace />} />
+            <Route
+              path="*"
+              element={
+                <Navigate
+                  to={
+                    new URLSearchParams(location.search).has("qr")
+                      ? "/nueva-incidencia" + location.search
+                      : "/dashboard"
+                  }
+                  replace
+                />
+              }
+            />
           </Routes>
           <footer className="page-footer">
             <span>ITT · Gestión de infraestructura</span>

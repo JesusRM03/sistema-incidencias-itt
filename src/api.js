@@ -3,17 +3,31 @@ export function setCSRF(v) {
   csrf = v;
 }
 export async function api(path, options = {}) {
-  const response = await fetch("/api" + path, {
-    credentials: "same-origin",
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrf,
-      ...options.headers,
-    },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  let response;
+  try {
+    response = await fetch("/api" + path, {
+      credentials: "same-origin",
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrf,
+        ...options.headers,
+      },
+      body:
+        options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+  } catch (e) {
+    if (e.name === "AbortError") throw e;
+    throw new Error(
+      "No se pudo conectar con el servidor. Comprueba tu conexión y vuelve a intentar.",
+      { cause: e },
+    );
+  }
+  const data = await response.json().catch(() => {
+    throw new Error(
+      "El servidor no pudo confirmar la operación. Vuelve a intentar con los mismos datos.",
+    );
   });
-  const data = await response.json();
   if (!response.ok) {
     const e = new Error(data.message || "No se pudo completar la solicitud.");
     e.status = response.status;
@@ -52,7 +66,12 @@ export async function photosToJSON(files) {
           const reader = new FileReader();
           reader.onerror = () =>
             reject(new Error("No se pudo leer la fotografía."));
-          reader.onload = () => resolve({ data: reader.result.split(",")[1] });
+          reader.onload = () =>
+            resolve({
+              name: file.name,
+              type: file.type,
+              data: reader.result.split(",")[1],
+            });
           reader.readAsDataURL(file);
         }),
     ),

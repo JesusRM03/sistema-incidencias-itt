@@ -61,6 +61,8 @@ export function Reports() {
           <div className="charts-grid">
             <BarGroup title="Estado de atención" rows={data.porEstado} />
             <BarGroup title="Tipo de falla" rows={data.porTipo} />
+            <BarGroup title="Edificio" rows={data.porEdificio} />
+            <BarGroup title="Periodo escolar" rows={data.porPeriodo} />
             <BarGroup title="Espacios reportados" rows={data.porEspacio} />
             <BarGroup title="Responsable vigente" rows={data.porTecnico} />
           </div>

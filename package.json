@@ -14,12 +14,17 @@
     "db:demo": "node --env-file=.env scripts/demo.js",
     "test": "node --test tests/*.test.js",
     "test:integration": "node --env-file=.env --test tests/integration/*.test.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "demo:config": "node scripts/demo-config.js",
+    "demo:up": "docker compose --project-name itt-demo --env-file .env.demo -f compose.demo.yaml up -d --build",
+    "demo:stop": "docker compose --project-name itt-demo --env-file .env.demo -f compose.demo.yaml stop",
+    "demo:reset": "node scripts/demo-reset.js"
   },
   "dependencies": {
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
     "express": "^5.3.0",
+    "fflate": "0.8.2",
     "helmet": "^8.3.0",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.16.0",

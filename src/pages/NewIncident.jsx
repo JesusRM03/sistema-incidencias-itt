@@ -1,191 +1,332 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, ScanLine } from "lucide-react";
 import { api, post } from "../api";
-import { useLoad } from "../hooks/useLoad.js";
+import { newKey, draftId, readDraft, saveDraft } from "../drafts";
+import { useLoad } from "../hooks/useLoad";
 import {
   Select,
   Textarea,
   ErrorBox,
   PageHead,
   Loading,
-} from "../components/ui.jsx";
-import {
-  LocationPicker,
-  QRScanner,
-  PhotoInput,
-} from "../components/Location.jsx";
+} from "../components/ui";
+import { LocationPicker, QRScanner, PhotoInput } from "../components/Location";
 
-export function NewIncident() {
-  const { data: c, error } = useLoad("/catalogos"),
-    [space, setSpace] = useState(
-      () => sessionStorage.getItem("itt_space") || "",
-    ),
-    [type, setType] = useState(""),
-    [photos, setPhotos] = useState([]),
-    [err, setErr] = useState(""),
-    [busy, setBusy] = useState(false),
-    [dup, setDup] = useState([]),
-    key = useRef(crypto.randomUUID()),
-    navigate = useNavigate();
+const storageWarning =
+  "Este navegador solo pudo guardar el borrador en memoria. Mantén abierta esta pestaña.";
+function emptyDraft() {
+  return {
+    key: newKey(),
+    space: "",
+    type: "",
+    description: "",
+    difference: "",
+    photos: [],
+    pending: false,
+  };
+}
+export function NewIncident({ userId }) {
+  const id = draftId(userId);
+  const { data: catalogs, error, reload } = useLoad("/catalogos");
+  const [initial, setInitial] = useState(null);
   useEffect(() => {
-    sessionStorage.removeItem("itt_space");
-    const qr = sessionStorage.getItem("itt_qr");
-    if (qr)
-      api("/qr/" + encodeURIComponent(qr))
-        .then((e) => {
-          setSpace(String(e.id));
-          sessionStorage.removeItem("itt_qr");
-        })
-        .catch((e) => setErr(e.message));
-  }, []);
-  useEffect(() => {
-    if (!space || !type) return;
     let live = true;
-    api(
-      "/incidencias/coincidencias?" +
-        new URLSearchParams({ espacio_id: space, tipo_falla_id: type }),
-    )
-      .then((d) => {
-        if (live) setDup(d);
+    readDraft(id)
+      .then((value) => {
+        if (live) setInitial({ value: value || emptyDraft(), warning: "" });
       })
       .catch(() => {
-        if (live) setDup([]);
+        if (live) setInitial({ value: emptyDraft(), warning: storageWarning });
       });
     return () => {
       live = false;
     };
-  }, [space, type]);
+  }, [id]);
+  if (!catalogs || !initial)
+    return (
+      <>
+        <Loading error={error} />
+        {error && (
+          <button className="button" onClick={reload}>
+            Reintentar
+          </button>
+        )}
+      </>
+    );
+  return <IncidentForm id={id} initial={initial} catalogs={catalogs} />;
+}
+function QrConfirmation({ token, onConfirm, onCancel }) {
+  const { data, error, reload } = useLoad("/qr/" + encodeURIComponent(token));
+  return (
+    <section
+      className="panel form-panel qr-confirm"
+      aria-label="Confirmación de ubicación"
+    >
+      <h2>Confirmar ubicación del QR</h2>
+      {data ? (
+        <>
+          <p>
+            <strong>
+              {data.clave} · {data.nombre}
+            </strong>
+            <br />
+            {data.edificio}
+          </p>
+          <button
+            className="button primary"
+            type="button"
+            onClick={() => onConfirm(String(data.id))}
+          >
+            Usar este espacio
+          </button>
+        </>
+      ) : (
+        <>
+          <Loading error={error} />
+          {error && (
+            <button className="button" onClick={reload}>
+              Volver a consultar
+            </button>
+          )}
+        </>
+      )}
+      <button type="button" className="button" onClick={onCancel}>
+        Elegir otro espacio
+      </button>
+    </section>
+  );
+}
+function IncidentForm({ id, initial, catalogs }) {
+  const [draft, setDraft] = useState(initial.value),
+    latest = useRef(initial.value),
+    [warning, setWarning] = useState(initial.warning),
+    [error, setError] = useState(""),
+    [dup, setDup] = useState([]),
+    [busy, setBusy] = useState(false),
+    [reading, setReading] = useState(false),
+    [scanner, setScanner] = useState(false),
+    lock = useRef(false),
+    navigate = useNavigate(),
+    location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const qr = params.get("qr"),
+    fromMap = params.get("espacio");
+  const update = useCallback(
+    (changes) => {
+      const value = { ...latest.current, ...changes };
+      latest.current = value;
+      setDraft(value);
+      return saveDraft(id, value, "photos" in changes).catch(() =>
+        setWarning(storageWarning),
+      );
+    },
+    [id],
+  );
+  const selectQr = useCallback(
+    (token) => navigate("/nueva-incidencia?qr=" + token),
+    [navigate],
+  );
+  const clearLocation = () => navigate("/nueva-incidencia", { replace: true });
+  useEffect(() => {
+    if (!fromMap || latest.current.pending) return;
+    if (catalogs.espacio.some((s) => String(s.id) === fromMap))
+      void update({ space: fromMap, difference: "" });
+    navigate("/nueva-incidencia", { replace: true });
+  }, [fromMap, catalogs, update, navigate]);
+  useEffect(() => {
+    let live = true;
+    if (!draft.space || !draft.type || draft.pending) return;
+    api(
+      "/incidencias/coincidencias?" +
+        new URLSearchParams({
+          espacio_id: draft.space,
+          tipo_falla_id: draft.type,
+        }),
+    )
+      .then((rows) => {
+        if (live) setDup(rows);
+      })
+      .catch(() => {
+        /* The server also checks for duplicates on submit. */
+      });
+    return () => {
+      live = false;
+    };
+  }, [draft.space, draft.type, draft.pending]);
+  function select(changes) {
+    setDup([]);
+    void update({ ...changes, difference: "" });
+  }
   async function submit(e) {
     e.preventDefault();
-    setErr("");
+    if (lock.current || reading || (qr !== null && !latest.current.pending))
+      return;
+    lock.current = true;
     setBusy(true);
-    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setError("");
+    const value = latest.current;
     try {
-      const r = await post(
+      await update({ pending: true });
+      const result = await post(
         "/incidencias",
         {
-          ...values,
-          espacio_id: Number(space),
-          tipo_falla_id: Number(type),
-          fotos: photos,
+          espacio_id: Number(value.space),
+          tipo_falla_id: Number(value.type),
+          descripcion: value.description,
+          diferencia_duplicado: value.difference,
+          fotos: value.photos.map(({ data }) => ({ data })),
         },
-        { headers: { "Idempotency-Key": key.current } },
+        { headers: { "Idempotency-Key": value.key } },
       );
-      navigate("/incidencias/" + r.id);
-    } catch (er) {
-      setErr(er.message);
-      if (er.coincidencias) setDup(er.coincidencias);
+      await saveDraft(id, null).catch(() => {});
+      navigate("/incidencias/" + result.id, {
+        replace: true,
+        state: { registered: result.folio },
+      });
+    } catch (err) {
+      setError(err.message);
+      if (err.status >= 400 && err.status < 500 && err.status !== 401) {
+        await update({ pending: false });
+        if (err.coincidencias) setDup(err.coincidencias);
+      }
     } finally {
+      lock.current = false;
       setBusy(false);
     }
   }
-  if (!c) return <Loading error={error} />;
   return (
     <>
       <Link className="back-link" to="/mis-incidencias">
         <ArrowLeft size={16} /> Volver a incidencias
       </Link>
       <PageHead
-        eyebrow="AYÚDANOS A CUIDAR EL CAMPUS"
+        eyebrow="REGISTRO DE INCIDENCIAS"
         title="Reportar una incidencia"
-        description="Describe la falla y confirma dónde ocurre. Nosotros le damos seguimiento."
+        description="Describe la falla y confirma dónde ocurre."
       />
+      {qr !== null && !draft.pending && (
+        <QrConfirmation
+          key={qr}
+          token={qr}
+          onCancel={clearLocation}
+          onConfirm={(space) => {
+            select({ space });
+            clearLocation();
+          }}
+        />
+      )}
       <div className="form-layout">
         <form className="panel form-panel" onSubmit={submit}>
-          <div className="form-section">
-            <h2>
-              <span>01</span> ¿Dónde está la falla?
-            </h2>
-            <p>Selecciona un espacio por catálogo, mapa o etiqueta QR.</p>
-            <LocationPicker catalogs={c} space={space} setSpace={setSpace} />
-            <details className="qr-details">
-              <summary>
-                <ScanLine size={17} /> Identificar espacio por QR
-              </summary>
-              <QRScanner onSelect={setSpace} />
-            </details>
-          </div>
-          <div className="form-section">
-            <h2>
-              <span>02</span> Cuéntanos qué sucede
-            </h2>
-            <Select
-              label="Tipo de falla"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              required
-            >
-              <option value="">Selecciona una categoría</option>
-              {c.tipo_falla.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </Select>
-            <Textarea
-              label="Descripción"
-              name="descripcion"
-              placeholder="¿Qué está fallando y cómo afecta el uso del espacio?"
-              minLength={20}
-              maxLength={2000}
-              rows={5}
-              required
-            />
-            <PhotoInput setPhotos={setPhotos} />
-          </div>
-          {dup.length > 0 && (
-            <div className="form-section duplicate">
-              <h3>Ya hay reportes similares en este espacio</h3>
-              <p>
-                Revísalos antes de continuar. Solo se muestran datos mínimos
-                para proteger la privacidad.
-              </p>
-              {dup.map((i) => (
-                <p key={i.folio}>
-                  <strong>{i.folio}</strong> · {i.estado}
-                </p>
-              ))}
+          <fieldset
+            disabled={busy || draft.pending || qr !== null}
+            className="incident-fields"
+          >
+            <div className="form-section">
+              <h2>
+                <span>01</span> ¿Dónde está la falla?
+              </h2>
+              <LocationPicker
+                catalogs={catalogs}
+                space={draft.space}
+                setSpace={(space) => select({ space })}
+              />
+              <details
+                className="qr-details"
+                onToggle={(e) => setScanner(e.currentTarget.open)}
+              >
+                <summary>
+                  <ScanLine size={17} /> Identificar espacio por QR
+                </summary>
+                {scanner && !qr && <QRScanner onToken={selectQr} />}
+              </details>
+            </div>
+            <div className="form-section">
+              <h2>
+                <span>02</span> Cuéntanos qué sucede
+              </h2>
+              <Select
+                label="Tipo de falla"
+                value={draft.type}
+                onChange={(e) => select({ type: e.target.value })}
+                required
+              >
+                <option value="">Selecciona una categoría</option>
+                {catalogs.tipo_falla.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </Select>
               <Textarea
-                label="¿Qué hace diferente este reporte?"
-                name="diferencia_duplicado"
-                minLength={10}
-                maxLength={1000}
+                label="Descripción"
+                name="descripcion"
+                value={draft.description}
+                onChange={(e) => update({ description: e.target.value })}
+                placeholder="¿Qué está fallando y cómo afecta el uso del espacio?"
+                minLength={20}
+                maxLength={2000}
+                rows={5}
                 required
               />
+              <PhotoInput
+                photos={draft.photos}
+                setPhotos={(photos) => update({ photos })}
+                onReading={setReading}
+              />
             </div>
+            {(dup.length > 0 || draft.difference) && (
+              <div className="form-section duplicate">
+                <h3>Ya hay reportes similares en este espacio</h3>
+                {dup.map((row) => (
+                  <p key={row.folio}>
+                    <strong>{row.folio}</strong> · {row.estado}
+                  </p>
+                ))}
+                <Textarea
+                  label="¿Qué hace diferente este reporte?"
+                  value={draft.difference}
+                  onChange={(e) => update({ difference: e.target.value })}
+                  minLength={10}
+                  maxLength={1000}
+                  required
+                />
+              </div>
+            )}
+          </fieldset>
+          <ErrorBox message={error || warning} />
+          {draft.pending && !busy && (
+            <p role="status">
+              Queda pendiente la confirmación del servidor. Reintenta para
+              recuperar el folio con los mismos datos.
+            </p>
           )}
-          <ErrorBox message={err} />
           <div className="form-actions">
             <Link className="button" to="/mis-incidencias">
-              Cancelar
+              Guardar y salir
             </Link>
-            <button className="button primary" disabled={busy}>
-              {busy ? "Registrando…" : "Registrar incidencia"}
+            <button
+              className="button primary"
+              disabled={busy || reading || (qr !== null && !draft.pending)}
+            >
+              {busy
+                ? "Registrando…"
+                : draft.pending
+                  ? "Reintentar envío"
+                  : "Registrar incidencia"}{" "}
               <ArrowRight size={17} />
             </button>
           </div>
         </form>
         <aside className="form-aside">
-          <span className="mini-label">UN BUEN REPORTE AYUDA</span>
-          <h3>
-            Los detalles hacen
-            <br />
-            la diferencia.
-          </h3>
-          <ol>
-            <li>Elige el aula o espacio exacto.</li>
-            <li>Describe lo que observaste.</li>
-            <li>Si puedes, agrega una fotografía.</li>
-          </ol>
-          <hr />
+          <h3>Antes de enviar</h3>
           <p>
-            Tu reporte recibirá un folio y comenzará en estado{" "}
-            <strong>Pendiente</strong>. La prioridad la define administración.
+            Comprueba el espacio y describe cómo afecta la falla. Puedes volver
+            al borrador desde esta pestaña.
           </p>
-          <p className="muted">
-            Si se trata de un riesgo inmediato, avisa también al personal del
-            campus.
+          <p>
+            Al registrarlo recibirás un folio para consultar el estado y las
+            respuestas.
           </p>
         </aside>
       </div>

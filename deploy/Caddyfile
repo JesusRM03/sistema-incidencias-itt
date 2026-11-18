@@ -1,0 +1,7 @@
+{
+	auto_https disable_redirects
+}
+https://{$DEMO_HOST}:{$HTTPS_PORT:8443} {
+	tls internal
+	reverse_proxy {$API_UPSTREAM:app:3001}
+}

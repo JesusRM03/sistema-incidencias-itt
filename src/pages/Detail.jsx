@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft, Check, RefreshCw, Clock, CheckCircle2 } from "lucide-react";
 import { post, date } from "../api";
 import { useLoad } from "../hooks/useLoad.js";
@@ -23,19 +23,28 @@ export function Detail({ user }) {
     [busy, setBusy] = useState(false),
     [photos, setPhotos] = useState([]),
     [success, setSuccess] = useState("");
+  const location = useLocation();
+  const [reading, setReading] = useState(false);
   const admin = user.rol_id === 3;
   async function send(e, path) {
     e.preventDefault();
     setErr("");
     setSuccess("");
     setBusy(true);
-    const d = Object.fromEntries(new FormData(e.currentTarget));
+    const form = e.currentTarget;
+    const d = Object.fromEntries(new FormData(form));
     try {
       await post("/incidencias/" + id + "/" + path, {
         ...d,
         version: i.version,
-        ...(path === "intervenciones" ? { fotos: photos } : {}),
+        ...(path === "intervenciones"
+          ? { fotos: photos.map(({ data }) => ({ data })) }
+          : {}),
       });
+      if (path === "intervenciones") {
+        form.reset();
+        setPhotos([]);
+      }
       setSuccess("Cambio guardado.");
       reload();
     } catch (er) {
@@ -67,6 +76,11 @@ export function Detail({ user }) {
           <RefreshCw size={18} />
         </button>
       </PageHead>
+      {location.state?.registered && (
+        <p className="notice success" role="status">
+          Incidencia registrada. Folio {location.state.registered}
+        </p>
+      )}
       <ErrorBox message={err} />
       {success && (
         <p className="notice success" role="status">
@@ -282,11 +296,18 @@ export function Detail({ user }) {
                     minLength={3}
                   />
                 )}
-                <PhotoInput setPhotos={setPhotos} />
+                <PhotoInput
+                  photos={photos}
+                  setPhotos={setPhotos}
+                  onReading={setReading}
+                />
                 <p className="muted">
                   Una solución se envía a revisión; no cierra el reporte.
                 </p>
-                <button className="button primary full" disabled={busy}>
+                <button
+                  className="button primary full"
+                  disabled={busy || reading}
+                >
                   Guardar intervención
                 </button>
               </form>
@@ -295,7 +316,11 @@ export function Detail({ user }) {
           {admin && i.estado === "En revisión" && (
             <ActionForm
               title="Validar solución técnica"
-              actions={["aprobar", "devolver"]}
+              actions={
+                i.intervenciones.some((v) => v.autor_id === user.id)
+                  ? ["devolver"]
+                  : ["aprobar", "devolver"]
+              }
               send={send}
               busy={busy}
             />

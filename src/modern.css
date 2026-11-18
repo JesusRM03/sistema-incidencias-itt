@@ -2,7 +2,7 @@
    ITT · Sistema de Incidencias — Design System v3
    Paleta institucional ejecutiva (escudo ITT)
    Sidebar azul marino · CTA naranja · Bento Grid blanco
-   WCAG AA en todas las combinaciones de texto/fondo
+   Estados y controles de la aplicación
    ============================================================ */
 
 /* ── Fuente institucional ── */
@@ -25,8 +25,8 @@
 
   /* ── Texto ── */
   --text:            #1E293B;   /* cuerpo principal – contraste 15:1 */
-  --text-muted:      #64748B;   /* secundario – contraste 5.9:1      */
-  --text-subtle:     #94A3B8;   /* placeholders                      */
+  --text-muted:      #526278;   /* texto secundario */
+  --text-subtle:     #57667C;   /* texto auxiliar */
 
   /* ── Azul marino institucional (sidebar / nav) ── */
   --navy:            #0F296B;   /* sidebar fondo                     */
@@ -38,9 +38,9 @@
   --navy-divider:    rgba(255,255,255,0.12); /* separadores sidebar     */
 
   /* ── Naranja institucional (CTA primario) ── */
-  --orange:          #EA580C;   /* botón principal – WCAG AA (4.6:1 sobre blanco) */
-  --orange-dark:     #D9460F;   /* hover                             */
-  --orange-text:     #FFFFFF;   /* texto sobre naranja – contraste 4.6:1 ✓ */
+  --orange:          #B94408;   /* fondo del botón principal */
+  --orange-dark:     #953306;   /* hover                             */
+  --orange-text:     #FFFFFF;   /* texto sobre naranja */
 
   /* ── Azul rey (botones secundarios destacados) ── */
   --blue:            #1D4ED8;   /* botón acción secundaria           */
@@ -272,7 +272,7 @@ code {
 }
 
 /* ── PRIMARY: naranja institucional (CTA: Nueva Incidencia, Enviar) ── */
-/* Texto blanco sobre #EA580C → contraste 4.6:1 ✓ WCAG AA */
+/* Acción principal con texto blanco. */
 .button.primary {
   background: var(--orange);
   color: var(--orange-text);
@@ -1952,11 +1952,27 @@ tbody tr:hover { background: #F8FAFC; }
 .qr-batch-card p { margin: 0; font-size: 13px; color: #374151; }
 .qr-batch-card a { overflow-wrap: anywhere; }
 .qr-scanner input[type="file"] { display: block; max-width: 100%; margin-top: 8px; }
+
+.network-banner { margin:0; padding:.7rem 1rem; background:#fff4cf; color:#342809; }
+.drawer-close { color:white; align-self:flex-start; }
+.incident-fields { border:0; padding:0; margin:0; min-width:0; }
+.photo-previews { display:flex; flex-wrap:wrap; list-style:none; padding:0; gap:.75rem; }
+.photo-previews li { width:8rem; display:grid; gap:.3rem; overflow-wrap:anywhere; }
+.photo-previews img { width:100%; height:6rem; object-fit:cover; border-radius:.5rem; }
+.camera-file { display:inline-flex; align-items:center; flex-wrap:wrap; gap:.4rem; margin: .6rem 0; }
+.camera-file input { max-width:100%; }
+.qr-scanner video { width:100%; max-height:45vh; }
+.qr-confirm button { margin:.3rem .5rem .3rem 0; }
+.qr-print-sheet { display:none; }
+.qr-batch-grid { grid-template-columns:repeat(auto-fill,minmax(min(210px,100%),1fr)); }
+.qr-batch-card img { max-width:280px; }
 @media print {
-  @page { size: A4; margin: 13mm; }
-  body { background: white !important; }
-  .sidebar, .topbar, .page-head, .tabs, .page-footer, .qr-batch-grid ~ *, .qr-batch-card a, .qr-batch-card small, button, .qr-label, .page-head + .panel { display: none !important; }
-  .app-shell, .workspace, .main-content, .panel { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: 0 !important; }
-  .qr-batch-grid { display: grid !important; grid-template-columns: repeat(3, 1fr); gap: 10mm; }
-  .qr-batch-card { border: 1px solid #555; color: black; }
+  body:has(.qr-print-sheet) > :not(.qr-print-sheet) { display:none !important; }
+  .qr-print-sheet { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4mm; align-items:start; }
+  .qr-print-sheet img { display:block; width:100%; max-height:85mm; object-fit:contain; break-inside:avoid; border:1px solid #888; }
 }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior:auto !important; transition-duration:0s !important; animation-duration:0s !important; }
+}
+
+.map-options .button { margin:0 .35rem .35rem 0; }
