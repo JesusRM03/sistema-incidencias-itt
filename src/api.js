@@ -2,20 +2,27 @@ let csrf = "";
 export function setCSRF(v) {
   csrf = v;
 }
+function upload(path, options, headers, body) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(options.method, "/api" + path);
+    for (const [name, value] of Object.entries(headers)) xhr.setRequestHeader(name, value);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) options.onProgress(Math.round(event.loaded * 100 / event.total));
+    };
+    xhr.onerror = () => reject(new Error("Conexión interrumpida."));
+    xhr.onload = () => resolve(new Response(xhr.responseText, {status: xhr.status}));
+    xhr.send(body);
+  });
+}
 export async function api(path, options = {}) {
   let response;
   try {
-    response = await fetch("/api" + path, {
-      credentials: "same-origin",
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": csrf,
-        ...options.headers,
-      },
-      body:
-        options.body === undefined ? undefined : JSON.stringify(options.body),
-    });
+    const headers = {"Content-Type": "application/json", "X-CSRF-Token": csrf, ...options.headers};
+    const body = options.body === undefined ? undefined : JSON.stringify(options.body);
+    response = options.onProgress
+      ? await upload(path, options, headers, body)
+      : await fetch("/api" + path, { credentials: "same-origin", ...options, headers, body });
   } catch (e) {
     if (e.name === "AbortError") throw e;
     throw new Error(

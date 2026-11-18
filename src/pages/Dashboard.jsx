@@ -1,18 +1,23 @@
 import { Link } from "react-router-dom";
 import {
   ClipboardList,
-  Settings,
+  Wrench,
+  ScanLine,
+  FileCheck,
   Plus,
   ArrowUpRight,
   ArrowRight,
   Clock,
-  CheckCircle2,
+
 } from "lucide-react";
 import { useLoad } from "../hooks/useLoad.js";
-import { PageHead, Loading, Stat, IncidentTable } from "../components/ui.jsx";
+import { PageHead, Loading, IncidentTable } from "../components/ui.jsx";
 
 export function Dashboard({ user }) {
-  const { data, error } = useLoad("/incidencias");
+  const tech = user.rol_id === 2;
+  const admin = user.rol_id === 3;
+  const staffFilter = tech ? "tecnico_id=" + user.id : "";
+  const { data, error } = useLoad("/incidencias?" + staffFilter);
   if (!data) return <Loading error={error} />;
   const count = (state) => data.porEstado.find((row) => row.nombre === state)?.total || 0;
   return (
@@ -26,60 +31,40 @@ export function Dashboard({ user }) {
         }
         description={
           user.rol_id === 3
-            ? "Una vista de las necesidades y la atención de nuestros espacios."
-            : "Aquí puedes consultar tus reportes y seguir su atención."
+            ? "Asigna los reportes pendientes y revisa las soluciones del equipo técnico."
+            : tech ? "Consulta tus asignaciones y registra la atención de cada falla." : "Aquí puedes consultar tus reportes y seguir su atención."
         }
       >
         <Link className="button primary" to="/nueva-incidencia">
           <Plus size={18} /> Nueva incidencia
         </Link>
       </PageHead>
-      <section className="overview-banner">
-        <div>
-          <span className="mini-label light">COMUNIDAD ITT</span>
-          <h2>
-            Espacios que funcionan.
-            <br />
-            Una comunidad que avanza.
-          </h2>
-          <p>Cada reporte ayuda a dar atención al lugar que compartimos.</p>
-          <Link to="/mapa">
-            Explorar el campus <ArrowUpRight size={17} />
-          </Link>
-        </div>
-        <div className="campus-art" aria-hidden="true">
-          <div className="art-window" />
-          <div className="art-building">T</div>
-          <div className="art-tree" />
-          <span>INSTITUTO TECNOLÓGICO DE TOLUCA</span>
-        </div>
+      <section className="role-home" aria-label="Accesos de trabajo">
+        {(admin ? [
+          ["Pendientes de asignar", "Pendiente", Clock],
+          ["Soluciones por revisar", "En revisión", FileCheck],
+          ["En atención", "En proceso", Wrench],
+          ["Todas las incidencias", "", ClipboardList],
+        ] : tech ? [
+          ["Mis asignaciones", "", ClipboardList],
+          ["En reparación", "En proceso", Wrench],
+          ["En revisión", "En revisión", FileCheck],
+        ] : [
+          ["Escanear QR", "qr", ScanLine],
+          ["Mis reportes", "", ClipboardList],
+          ["Por confirmar", "Resuelto", FileCheck],
+        ]).map(([label, state, Icon]) => {
+          const query = new URLSearchParams(staffFilter);
+          if (state) query.set("estado", state);
+          const scan = state === "qr";
+          return <Link key={label} className="role-shortcut" to={scan ? "/nueva-incidencia?escanear=1" : "/mis-incidencias?" + query}>
+            <Icon size={22} aria-hidden="true"/>
+            <span>{label}</span>
+            {scan ? <ArrowUpRight size={20}/> : <strong>{state ? count(state) : data.total}</strong>}
+          </Link>;
+        })}
       </section>
-      <div className="stats-grid">
-        <Stat
-          label="Incidencias"
-          value={data.total}
-          note="En tu ámbito de consulta"
-          icon={ClipboardList}
-        />
-        <Stat
-          label="Por atender"
-          value={count("Pendiente")}
-          note="Pendientes de asignación"
-          icon={Clock}
-        />
-        <Stat
-          label="En atención"
-          value={count("En proceso") + count("En revisión")}
-          note="Proceso y revisión"
-          icon={Settings}
-        />
-        <Stat
-          label="Soluciones"
-          value={count("Resuelto") + count("Cerrado")}
-          note="Resueltas y cerradas"
-          icon={CheckCircle2}
-        />
-      </div>
+      <Link className="map-shortcut" to="/mapa">Explorar el campus <ArrowUpRight size={16}/></Link>
       <section className="panel">
         <div className="section-head">
           <div>

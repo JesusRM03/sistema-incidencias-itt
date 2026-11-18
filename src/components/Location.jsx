@@ -5,12 +5,15 @@ import map from "../assets/mapa-itt.jpg";
 import jsQR from "jsqr";
 import { Field, Input, Select, ErrorBox } from "./ui.jsx";
 
+import { reveal } from "../navigation.js";
+
 export function LocationPicker({
   catalogs,
   space,
   setSpace,
   showMap = true,
   mapOpen = false,
+  invalidSpace = "",
 }) {
   const [building, setBuilding] = useState(""),
     roomPanel = useRef(null);
@@ -61,7 +64,7 @@ export function LocationPicker({
             ))}
         </Select>
         <Select
-          label="Aula o espacio"
+          label="Aula o espacio" name="espacio" error={invalidSpace}
           value={space}
           onChange={(e) => setSpace(e.target.value)}
           required
@@ -98,7 +101,7 @@ export function LocationPicker({
                 onClick={() => {
                   if (buildings.length === 1) chooseBuilding(buildings[0].id);
                   else { chooseBuilding(""); setShared(position); }
-                  requestAnimationFrame(() => roomPanel.current?.focus());
+                  requestAnimationFrame(() => reveal(roomPanel.current));
                 }}>{buildings.map((b) => b.clave).join(" / ")}</button>
             ))}
           </div>
@@ -261,12 +264,12 @@ export function QRScanner({ onToken }) {
         {open ? "Cerrar cámara" : "Escanear etiqueta QR"}
       </button>
       {open && (
-        <video
+        <div className="scan-frame"><video
           ref={video}
           playsInline
           muted
           aria-label="Cámara para lectura QR"
-        />
+        /><span aria-hidden="true" /></div>
       )}
       <label>
         Leer QR desde una fotografía

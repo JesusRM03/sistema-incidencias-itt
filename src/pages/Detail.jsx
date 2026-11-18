@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft, Check, RefreshCw, Clock, CheckCircle2 } from "lucide-react";
+import { EvidenceGallery } from "../components/EvidenceGallery.jsx";
+import { reveal } from "../navigation.js";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Check, RefreshCw, Clock, CheckCircle2, Copy, ClipboardList, UserRoundCheck, Wrench, FileCheck, MessageSquare } from "lucide-react";
 import { post, date } from "../api";
 import { useLoad } from "../hooks/useLoad.js";
 import {
@@ -14,6 +16,23 @@ import {
 } from "../components/ui.jsx";
 import { PhotoInput } from "../components/Location.jsx";
 
+const nextStep = {
+  Pendiente: "El administrador revisa la falla y asigna a un técnico.",
+  "En proceso": "El técnico responsable registra el diagnóstico y la reparación.",
+  "En revisión": "El administrador revisa la solución y la evidencia.",
+  Resuelto: "El reportante confirma si la falla quedó solucionada.",
+  Cerrado: "El seguimiento terminó. Puedes consultar el historial y las evidencias.",
+  Cancelado: "El historial conserva el motivo de la cancelación.",
+};
+function EventIcon({type}) {
+  const Icon = ({Asignación: UserRoundCheck, Diagnóstico: Wrench, Avance: Wrench, Solución: Wrench, aprobar: FileCheck, cerrar: CheckCircle2, Comentario: MessageSquare})[type] || ClipboardList;
+  return <Icon size={14} aria-hidden="true"/>;
+}
+const feedback = {
+  priorizar: "Clasificación y prioridad actualizadas.", aprobar: "Solución aprobada. Ya puede confirmarse el cierre.",
+  devolver: "Incidencia devuelta a atención.", cerrar: "Incidencia cerrada.", inconformidad: "Inconformidad registrada. El caso vuelve a atención.",
+  cancelar: "Incidencia cancelada. Se conservó el historial.", duplicado: "Duplicado vinculado al folio principal.",
+};
 export function Detail({ user }) {
   const { id } = useParams(),
     { data: i, error, reload } = useLoad("/incidencias/" + id),
@@ -26,8 +45,28 @@ export function Detail({ user }) {
   const location = useLocation();
   const [reading, setReading] = useState(false);
   const admin = user.rol_id === 3;
+  const sending = useRef(false);
+  const [progress, setProgress] = useState(null);
+  const navigate = useNavigate();
+  const openedId = i?.id;
+  useEffect(() => {
+    if (!openedId || !/^#evento-\d+$/.test(location.hash)) return;
+    const target = document.getElementById(location.hash.slice(1));
+    reveal(target || document.getElementById("historial"));
+  }, [openedId, location.hash]);
+  async function copyFolio() {
+    try {
+      await navigator.clipboard.writeText(i.folio);
+      setSuccess("Folio copiado: " + i.folio);
+    } catch {
+      setErr("Selecciona y copia el folio " + i.folio + " manualmente.");
+    }
+  }
   async function send(e, path) {
     e.preventDefault();
+    if (sending.current) return;
+    sending.current = true;
+    setProgress(null);
     setErr("");
     setSuccess("");
     setBusy(true);
@@ -40,26 +79,44 @@ export function Detail({ user }) {
         ...(path === "intervenciones"
           ? { fotos: photos.map(({ data }) => ({ data })) }
           : {}),
-      });
+      }, {onProgress: path === "intervenciones" && photos.length ? setProgress : undefined});
       if (path === "intervenciones") {
         form.reset();
         setPhotos([]);
       }
-      setSuccess("Cambio guardado.");
+      if (path === "asignaciones") {
+        const name = tech?.find((t) => String(t.id) === d.tecnico_id)?.nombre;
+        setSuccess(name ? "Incidencia asignada a " + name + "." : "Asignación guardada.");
+      } else if (path === "intervenciones") {
+        setSuccess(d.tipo === "Solución" ? "Solución enviada a revisión." : d.tipo + " registrado en el historial.");
+      } else setSuccess(feedback[d.accion] || "Cambio guardado.");
       reload();
     } catch (er) {
       setErr(er.message);
       if (er.status === 409) reload();
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
   if (!i) return <Loading error={error} />;
   const owner = i.reportante_id === user.id,
     assigned = i.tecnico_id === user.id;
+  const canClassify = admin && !["Cerrado", "Cancelado"].includes(i.estado);
+  const canAssign = admin && ["Pendiente", "En proceso"].includes(i.estado);
+  const canIntervene = (admin || assigned) && i.estado === "En proceso";
+  const canReview = admin && i.estado === "En revisión";
+  const canClose = (owner || admin) && i.estado === "Resuelto";
+  const sections = [
+    [canClassify, "prioridad", "Clasificar"], [canAssign, "asignar", i.tecnico ? "Reasignar" : "Asignar"],
+    [canIntervene, "intervenir", "Registrar avance"], [canReview, "revisar", "Revisar solución"],
+    [canClose, "cierre", "Verificar cierre"], [true, "historial", "Historial"],
+  ];
   return (
     <>
-      <Link className="back-link" to="/mis-incidencias">
+      <Link className="back-link" to={location.state?.list || "/mis-incidencias"} onClick={(event) => {
+        if (location.state?.list && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate(-1); }
+      }}>
         <ArrowLeft size={16} /> Todas las incidencias
       </Link>
       <PageHead
@@ -68,6 +125,7 @@ export function Detail({ user }) {
         description={i.edificio + " · " + i.espacio_clave}
       >
         <Badge state={i.estado} />
+        <button className="button small" onClick={copyFolio}><Copy size={16}/> Copiar folio</button>
         <button
           className="icon-button"
           aria-label="Actualizar incidencia"
@@ -81,9 +139,15 @@ export function Detail({ user }) {
           Incidencia registrada. Folio {location.state.registered}
         </p>
       )}
+      <div className="case-guide">
+        <p><strong>{i.estado}</strong> · {nextStep[i.estado]}</p>
+        <div aria-label="Apartados de la incidencia" role="group">
+          {sections.filter(([visible]) => visible).map(([, target, title]) => <button className="button small" key={target} onClick={() => reveal(document.getElementById(target))}>{title}</button>)}
+        </div>
+      </div>
       <ErrorBox message={err} />
       {success && (
-        <p className="notice success" role="status">
+        <p className="notice success case-feedback" role="status">
           <Check size={18} />
           {success}
         </p>
@@ -126,25 +190,9 @@ export function Detail({ user }) {
                 <dd>{date(i.resuelta_en)}</dd>
               </div>
             </dl>
-            {i.evidencias.length > 0 && (
-              <div className="evidence-grid">
-                {i.evidencias.map((e) => (
-                  <a
-                    key={e.id}
-                    href={"/api/evidencias/" + e.id}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <img
-                      src={"/api/evidencias/" + e.id}
-                      alt={"Evidencia fotográfica " + e.id}
-                    />
-                  </a>
-                ))}
-              </div>
-            )}
+            <EvidenceGallery photos={i.evidencias} interventions={i.intervenciones} />
           </section>
-          <section className="panel">
+          <section id="historial" tabIndex={-1} className="panel case-section">
             <div className="section-head">
               <div>
                 <h2>Historial de seguimiento</h2>
@@ -154,8 +202,8 @@ export function Detail({ user }) {
             </div>
             <ol className="timeline">
               {i.historial.map((h) => (
-                <li key={h.id}>
-                  <span className="timeline-dot" />
+                <li key={h.id} id={"evento-" + h.id} aria-current={location.hash === "#evento-" + h.id ? "location" : undefined} tabIndex={-1}>
+                  <span className="event-icon"><EventIcon type={h.tipo}/></span>
                   <div className="timeline-heading">
                     <strong>{h.tipo}</strong>
                     <time>{date(h.creado_en)}</time>
@@ -188,8 +236,8 @@ export function Detail({ user }) {
           )}
         </div>
         <aside className="detail-actions">
-          {admin && !["Cerrado", "Cancelado"].includes(i.estado) && (
-            <section className="panel form-panel">
+          {canClassify && (
+            <section tabIndex={-1} id="prioridad" className="panel form-panel case-section">
               <h2>Revisión y prioridad</h2>
               <form onSubmit={(e) => send(e, "acciones")}>
                 <input type="hidden" name="accion" value="priorizar" />
@@ -237,8 +285,8 @@ export function Detail({ user }) {
               </form>
             </section>
           )}
-          {admin && ["Pendiente", "En proceso"].includes(i.estado) && (
-            <section className="panel form-panel">
+          {canAssign && (
+            <section tabIndex={-1} id="asignar" className="panel form-panel case-section">
               <h2>{i.tecnico ? "Reasignar atención" : "Asignar atención"}</h2>
               <form onSubmit={(e) => send(e, "asignaciones")}>
                 <Select
@@ -268,8 +316,8 @@ export function Detail({ user }) {
               </form>
             </section>
           )}
-          {(admin || assigned) && i.estado === "En proceso" && (
-            <section className="panel form-panel">
+          {canIntervene && (
+            <section tabIndex={-1} id="intervenir" className="panel form-panel case-section">
               <h2>Registrar intervención</h2>
               <form onSubmit={(e) => send(e, "intervenciones")}>
                 <Select label="Tipo de intervención" name="tipo">
@@ -301,6 +349,7 @@ export function Detail({ user }) {
                   setPhotos={setPhotos}
                   onReading={setReading}
                 />
+                {busy && progress !== null && <p role="status">{progress < 100 ? `Enviando fotografías · ${progress}%` : "Fotografías enviadas. Guardando intervención…"}</p>}
                 <p className="muted">
                   Una solución se envía a revisión; no cierra el reporte.
                 </p>
@@ -313,8 +362,8 @@ export function Detail({ user }) {
               </form>
             </section>
           )}
-          {admin && i.estado === "En revisión" && (
-            <ActionForm
+          {canReview && (
+            <ActionForm id="revisar"
               title="Validar solución técnica"
               actions={
                 i.intervenciones.some((v) => v.autor_id === user.id)
@@ -325,8 +374,8 @@ export function Detail({ user }) {
               busy={busy}
             />
           )}{" "}
-          {(owner || admin) && i.estado === "Resuelto" && (
-            <ActionForm
+          {canClose && (
+            <ActionForm id="cierre"
               title={
                 owner ? "¿La falla quedó solucionada?" : "Verificar cierre"
               }
@@ -335,13 +384,13 @@ export function Detail({ user }) {
               busy={busy}
             />
           )}{" "}
-          {admin && ["Pendiente", "En proceso"].includes(i.estado) && (
-            <ActionForm
+          {canAssign && (
+            <details className="panel disclosure more-actions"><summary>Más acciones</summary><ActionForm
               title="Cancelar o vincular duplicado"
               actions={["cancelar", "duplicado"]}
               send={send}
               busy={busy}
-            />
+            /></details>
           )}{" "}
           {["Cerrado", "Cancelado"].includes(i.estado) && (
             <div className="form-aside">
@@ -359,10 +408,10 @@ export function Detail({ user }) {
   );
 }
 
-export function ActionForm({ title, actions, send, busy }) {
+export function ActionForm({ id, title, actions, send, busy }) {
   const [action, setAction] = useState(actions[0]);
   return (
-    <section className="panel form-panel">
+    <section id={id} tabIndex={-1} className="panel form-panel case-section">
       <h2>{title}</h2>
       <form
         onSubmit={(e) => {

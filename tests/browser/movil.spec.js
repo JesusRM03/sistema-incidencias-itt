@@ -85,7 +85,7 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
         .getByText(label.clave + " · " + label.nombre, { exact: true })
         .first(),
     ).toBeVisible();
-    await button(alumno, "Usar este espacio").click();
+    await button(alumno, "Usar este salón").click();
     const cookies = await contexts[1].cookies();
     const session = cookies.find((c) => c.name === "itt_session");
     expect(
@@ -144,6 +144,9 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
       JSON.stringify({ detalle: detail, folio }),
     );
     await admin.goto(detail);
+    await button(admin, "Asignar").click();
+    await expect(admin.locator("#asignar")).toBeFocused();
+    await expect(admin.getByRole("heading", {name:"Cancelar o vincular duplicado"})).toBeHidden();
     await admin.getByLabel("Prioridad", { exact: true }).selectOption("Alta");
     await admin
       .getByLabel("Motivo de la clasificación o cambio")
@@ -158,6 +161,7 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
       .fill("Revisar el proyector reportado.");
     await button(admin, "Confirmar asignación").click();
     await expect(admin.locator(".page-head .badge")).toHaveText("En proceso");
+    await expect(admin.getByRole("status").filter({hasText:"Incidencia asignada a Técnico demo."})).toBeVisible();
     await login(tecnico, "tecnico", detail);
     for (const [kind, content] of [
       ["Diagnóstico", "Se revisó la alimentación."],
@@ -177,6 +181,13 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
         tecnico.locator(".timeline").getByText(content, { exact: true }),
       ).toBeVisible();
     }
+    await tecnico.getByRole("button", {name:"Ampliar fotografía 1 · Reporte inicial"}).click();
+    const gallery = tecnico.getByRole("dialog", {name:"Galería de evidencias"});
+    await expect(gallery).toContainText("1 de 2 · Reporte inicial");
+    await gallery.getByRole("button", {name:"Siguiente"}).click();
+    await expect(gallery).toContainText("2 de 2 · Diagnóstico");
+    await tecnico.keyboard.press("Escape");
+    await expect(gallery).toBeHidden();
     await admin.reload();
     await admin
       .getByLabel("Motivo o verificación")
@@ -201,6 +212,14 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
       .first();
     await notice.getByRole("button", { name: "Marcar como leída" }).click();
     await expect(notice.getByText("Leída", { exact: true })).toBeVisible();
+    const noticeLink = notice.getByRole("link");
+    const eventHash = (await noticeLink.getAttribute("href")).split("#")[1];
+    expect(eventHash).toMatch(/^evento-\d+$/);
+    await noticeLink.click();
+    const event = alumno.locator("#" + eventHash);
+    await expect(event).toHaveAttribute("aria-current", "location");
+    await expect(event).toBeFocused();
+    await expect(button(alumno, "Copiar folio")).toBeVisible();
     await menu(admin, "Reportes");
     await admin.getByLabel("Buscar", { exact: true }).fill(folio);
     await expect(admin.locator("tbody tr")).toHaveCount(1);
@@ -274,7 +293,7 @@ test("Etiquetas impresas y ZIP legibles, lectura de foto y error recuperable de 
         buffer: Buffer.from(png),
       });
     await expect(p).toHaveURL(url);
-    await button(p, "Usar este espacio").click();
+    await button(p, "Usar este salón").click();
     await expect(p.getByLabel("Aula o espacio")).not.toHaveValue("");
   } finally {
     await phone.close();
@@ -325,10 +344,10 @@ test("Lector en vivo con una cámara virtual que muestra la etiqueta emitida", a
     await login(p, "alumno", "/nueva-incidencia");
     await p.getByText("Identificar espacio por QR", { exact: true }).click();
     await button(p, "Escanear etiqueta QR").click();
-    await expect(button(p, "Usar este espacio")).toBeVisible({
+    await expect(button(p, "Usar este salón")).toBeVisible({
       timeout: 15000,
     });
-    await button(p, "Usar este espacio").click();
+    await button(p, "Usar este salón").click();
     await expect(p.getByLabel("Aula o espacio")).toHaveValue("2");
   } finally {
     await camera.close();
@@ -359,7 +378,7 @@ test("Mapa con salones superpuestos, menú por teclado y borrador al volver de u
       .getByRole("button", { name: /Elegir edificio T ·/ })
       .click();
     await button(page, "T-02 · Laboratorio de cómputo 2").click();
-    await page.getByRole("link", { name: "Reportar aquí" }).click();
+    await page.getByRole("link", { name: "Reportar en T-02" }).click();
     await expect(page.getByLabel("Aula o espacio")).toHaveValue("2");
     await page
       .getByLabel("Descripción", { exact: true })
@@ -396,4 +415,31 @@ test("Mapa con salones superpuestos, menú por teclado y borrador al volver de u
   } finally {
     await context.close();
   }
+});
+
+test("Inicio por rol, tarjeta móvil, filtros y regreso a la posición anterior", async ({page}) => {
+  await page.setViewportSize({width:360,height:720});
+  await login(page,"admin");
+  await page.getByRole("link",{name:/Pendientes de asignar/}).click();
+  await expect(page.getByLabel("Estado",{exact:true})).toHaveValue("Pendiente");
+  const card = page.locator(".incident-card").last();
+  await expect(card).toBeVisible();
+  await card.scrollIntoViewIfNeeded();
+  const y = await page.evaluate(() => scrollY);
+  await card.click();
+  await expect(page.getByRole("button",{name:"Copiar folio"})).toBeVisible();
+  await page.goBack();
+  await expect(page.getByLabel("Estado",{exact:true})).toHaveValue("Pendiente");
+  await expect.poll(async () => Math.abs(await page.evaluate(() => scrollY) - y)).toBeLessThan(5);
+});
+
+test("Atajo de escaneo y guía al primer campo pendiente", async ({page}) => {
+  await login(page,"alumno");
+  await page.getByRole("link",{name:"Escanear QR"}).click();
+  await expect(button(page,"Escanear etiqueta QR")).toBeVisible();
+  await page.getByLabel("Edificio",{exact:true}).selectOption("1");
+  await page.getByLabel("Aula o espacio").selectOption("1");
+  await button(page,"Registrar incidencia").click();
+  await expect(page.getByLabel("Tipo de falla",{exact:true})).toBeFocused();
+  await expect(page.getByRole("alert")).toContainText("Elige el tipo de falla.");
 });

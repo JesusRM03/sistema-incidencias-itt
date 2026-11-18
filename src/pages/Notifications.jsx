@@ -28,7 +28,7 @@ export function Notifications() {
                   <Bell size={20} />
                 </span>
                 <div>
-                  <Link to={"/incidencias/" + n.incidencia_id}>
+                  <Link to={"/incidencias/" + n.incidencia_id + "#evento-" + n.evento_id}>
                     <strong>
                       {n.tipo} · {n.folio}
                     </strong>

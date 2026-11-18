@@ -1,7 +1,8 @@
+import { reveal } from "../navigation.js";
 import { FaultIcon } from "../components/FaultIcon.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, ScanLine } from "lucide-react";
+import { ArrowLeft, ArrowRight, ScanLine, CircleCheck } from "lucide-react";
 import { api, post } from "../api";
 import { newKey, draftId, readDraft, saveDraft } from "../drafts";
 import { useLoad } from "../hooks/useLoad";
@@ -61,14 +62,14 @@ function QrConfirmation({ token, onConfirm, onCancel }) {
   const { data, error, reload } = useLoad("/qr/" + encodeURIComponent(token));
   return (
     <section
-      className="panel form-panel qr-confirm"
+      className={"panel form-panel qr-confirm" + (data ? " qr-recognized" : "")}
       aria-label="Confirmación de ubicación"
     >
       <h2>Confirmar ubicación del QR</h2>
       {data ? (
         <>
-          <p>
-            <strong>
+          <p className="qr-place" role="status">
+            <CircleCheck aria-hidden="true" /><strong>
               {data.clave} · {data.nombre}
             </strong>
             <br />
@@ -79,7 +80,7 @@ function QrConfirmation({ token, onConfirm, onCancel }) {
             type="button"
             onClick={() => onConfirm(String(data.id))}
           >
-            Usar este espacio
+            Usar este salón
           </button>
         </>
       ) : (
@@ -99,6 +100,7 @@ function QrConfirmation({ token, onConfirm, onCancel }) {
   );
 }
 function IncidentForm({ id, initial, catalogs }) {
+  const location = useLocation();
   const [draft, setDraft] = useState(initial.value),
     latest = useRef(initial.value),
     [warning, setWarning] = useState(initial.warning),
@@ -106,10 +108,11 @@ function IncidentForm({ id, initial, catalogs }) {
     [dup, setDup] = useState([]),
     [busy, setBusy] = useState(false),
     [reading, setReading] = useState(false),
-    [scanner, setScanner] = useState(false),
+    [scanner, setScanner] = useState(() => new URLSearchParams(location.search).get("escanear") === "1"),
+    [progress, setProgress] = useState(null),
+    [invalid, setInvalid] = useState(null),
     lock = useRef(false),
-    navigate = useNavigate(),
-    location = useLocation();
+    navigate = useNavigate();
   const params = new URLSearchParams(location.search);
   const qr = params.get("qr"),
     fromMap = params.get("espacio");
@@ -156,6 +159,7 @@ function IncidentForm({ id, initial, catalogs }) {
     };
   }, [draft.space, draft.type, draft.pending]);
   function select(changes) {
+    if (changes.space && invalid?.name === "espacio") setInvalid(null);
     setDup([]);
     void update({ ...changes, difference: "" });
   }
@@ -165,6 +169,7 @@ function IncidentForm({ id, initial, catalogs }) {
       return;
     lock.current = true;
     setBusy(true);
+    setProgress(null);
     setError("");
     const value = latest.current;
     try {
@@ -178,7 +183,7 @@ function IncidentForm({ id, initial, catalogs }) {
           diferencia_duplicado: value.difference,
           fotos: value.photos.map(({ data }) => ({ data })),
         },
-        { headers: { "Idempotency-Key": value.key } },
+        { headers: { "Idempotency-Key": value.key }, onProgress: value.photos.length ? setProgress : undefined },
       );
       await saveDraft(id, null).catch(() => {});
       navigate("/incidencias/" + result.id, {
@@ -218,7 +223,18 @@ function IncidentForm({ id, initial, catalogs }) {
         />
       )}
       <div className="form-layout">
-        <form className="panel form-panel" onSubmit={submit}>
+        <form className="panel form-panel" onSubmit={submit} onInvalidCapture={(event) => {
+          const field = event.target;
+          if (field !== event.currentTarget.querySelector(":is(input,select,textarea):invalid")) return;
+          const messages = {
+            espacio: "Elige el aula o espacio.",
+            tipo: "Elige el tipo de falla.",
+            descripcion: "Describe la falla con al menos 20 caracteres.",
+            diferencia: "Explica qué distingue este reporte con al menos 10 caracteres.",
+          };
+          setInvalid({ name: field.name, message: messages[field.name] || field.validationMessage });
+          requestAnimationFrame(() => reveal(field));
+        }} onChange={(event) => { if (event.target.name === invalid?.name) setInvalid(null); }}>
           <fieldset
             disabled={busy || draft.pending || qr !== null}
             className="incident-fields"
@@ -229,11 +245,12 @@ function IncidentForm({ id, initial, catalogs }) {
               </h2>
               <LocationPicker
                 catalogs={catalogs}
+                invalidSpace={invalid?.name === "espacio" ? invalid.message : ""}
                 space={draft.space}
                 setSpace={(space) => select({ space })}
               />
               <details
-                className="qr-details"
+                className="qr-details" open={scanner}
                 onToggle={(e) => setScanner(e.currentTarget.open)}
               >
                 <summary>
@@ -247,7 +264,7 @@ function IncidentForm({ id, initial, catalogs }) {
                 <span>02</span> Cuéntanos qué sucede
               </h2>
               <Select
-                label={<span className="fault-label"><FaultIcon name={catalogs.tipo_falla?.find((t) => String(t.id) === String(draft.type))?.nombre} />Tipo de falla</span>}
+                error={invalid?.name === "tipo" ? invalid.message : ""} name="tipo" label={<span className="fault-label"><FaultIcon name={catalogs.tipo_falla?.find((t) => String(t.id) === String(draft.type))?.nombre} />Tipo de falla</span>}
                 value={draft.type}
                 onChange={(e) => select({ type: e.target.value })}
                 required
@@ -260,11 +277,11 @@ function IncidentForm({ id, initial, catalogs }) {
                 ))}
               </Select>
               <div className="fault-choices" role="group" aria-label="Categorías de falla">
-                {catalogs.tipo_falla.map((t) => <button type="button" key={t.id} className="button small" aria-pressed={String(draft.type) === String(t.id)} onClick={() => select({type:String(t.id)})}><FaultIcon name={t.nombre} />{t.nombre}</button>)}
+                {catalogs.tipo_falla.map((t) => <button type="button" key={t.id} className="button small" aria-pressed={String(draft.type) === String(t.id)} onClick={() => {setInvalid(null); select({type:String(t.id)});}}><FaultIcon name={t.nombre} />{t.nombre}</button>)}
               </div>
               <Textarea
                 label="Descripción"
-                name="descripcion"
+                error={invalid?.name === "descripcion" ? invalid.message : ""} name="descripcion"
                 value={draft.description}
                 onChange={(e) => update({ description: e.target.value })}
                 placeholder="¿Qué está fallando y cómo afecta el uso del espacio?"
@@ -288,7 +305,7 @@ function IncidentForm({ id, initial, catalogs }) {
                   </p>
                 ))}
                 <Textarea
-                  label="¿Qué hace diferente este reporte?"
+                  label="¿Qué hace diferente este reporte?" error={invalid?.name === "diferencia" ? invalid.message : ""} name="diferencia"
                   value={draft.difference}
                   onChange={(e) => update({ difference: e.target.value })}
                   minLength={10}
@@ -299,6 +316,7 @@ function IncidentForm({ id, initial, catalogs }) {
             )}
           </fieldset>
           <ErrorBox message={error || warning} />
+          {busy && progress !== null && <p role="status">{progress < 100 ? `Enviando fotografías · ${progress}%` : "Fotografías enviadas. Guardando el reporte…"}</p>}
           {draft.pending && !busy && (
             <p role="status">
               Queda pendiente la confirmación del servidor. Reintenta para

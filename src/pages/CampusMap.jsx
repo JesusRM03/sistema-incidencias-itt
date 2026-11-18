@@ -29,7 +29,7 @@ export function CampusMap() {
               className="button primary"
               to={"/nueva-incidencia?espacio=" + space}
             >
-              Reportar aquí <ArrowRight size={16} />
+              Reportar en {c.espacio.find((room) => String(room.id) === space)?.clave} <ArrowRight size={16} />
             </Link>
           </p>
         )}
