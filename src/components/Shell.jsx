@@ -172,7 +172,7 @@ export function Shell({ user, onLogout }) {
               path="/auditoria"
               element={admin ? <Audit /> : <Navigate to="/dashboard" />}
             />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to={sessionStorage.getItem("itt_qr") ? "/nueva-incidencia" : "/dashboard"} replace />} />
           </Routes>
           <footer className="page-footer">
             <span>ITT · Gestión de infraestructura</span>

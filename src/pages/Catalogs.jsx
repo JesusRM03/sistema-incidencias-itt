@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, X, Download } from "lucide-react";
 import { post, patch } from "../api";
+import { QrBatch } from "../components/QrBatch.jsx";
 import { useLoad } from "../hooks/useLoad.js";
 import {
   Input,
@@ -75,6 +76,7 @@ export function Catalogs() {
         ))}
       </div>
       <ErrorBox message={err} />
+      {tab === "espacio" && <QrBatch spaces={c.espacio} buildings={c.edificio} />}
       {(creating || edit) && (
         <section className="panel form-panel">
           <div className="section-head">

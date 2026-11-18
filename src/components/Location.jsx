@@ -122,6 +122,27 @@ export function QRScanner({ onSelect }) {
     },
     [onSelect],
   );
+  async function readPhoto(file) {
+    if (!file) return;
+    setErr("");
+    let bitmap;
+    try {
+      bitmap = await createImageBitmap(file);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      context.drawImage(bitmap, 0, 0);
+      const data = context.getImageData(0, 0, canvas.width, canvas.height);
+      const decoded = jsQR(data.data, data.width, data.height);
+      if (!decoded) throw new Error("No se encontró un código QR legible en la imagen.");
+      await resolve(decoded.data);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      bitmap?.close();
+    }
+  }
   useEffect(() => {
     if (!open) return;
     let stream,
@@ -185,6 +206,12 @@ export function QRScanner({ onSelect }) {
         <ScanLine size={17} />
         {open ? "Cerrar cámara" : "Escanear etiqueta QR"}
       </button>
+      {open && !navigator.mediaDevices?.getUserMedia && (
+        <p role="alert">
+          Para usar la cámara desde la página se necesita HTTPS (o localhost).
+          Puedes escanear con la cámara normal del celular o cargar una foto.
+        </p>
+      )}
       {open && (
         <video
           ref={video}
@@ -193,6 +220,17 @@ export function QRScanner({ onSelect }) {
           aria-label="Cámara para lectura QR"
         />
       )}
+      <label>
+        Leer QR desde una fotografía
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(e) => {
+            void readPhoto(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+      </label>
       <div className="row">
         <Input
           label="Enlace o código de la etiqueta QR"

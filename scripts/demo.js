@@ -1,5 +1,6 @@
 // Explicit opt-in only. Run against a disposable database, never institutional data.
 import argon2 from "argon2";
+import { randomBytes } from "node:crypto";
 import { pool, query as q, transaction as tx } from "../server/db.js";
 if (process.env.ALLOW_DEMO !== "true")
   throw new Error("Se requiere ALLOW_DEMO=true y una base de prueba vacía.");
@@ -48,18 +49,29 @@ try {
         key,
         name,
       ]);
-      for (let j = 1; j <= 3; j++)
-        await q(
+      for (let j = 1; j <= 3; j++) {
+        const nombres = {
+          T: ["Laboratorio de cómputo 1", "Laboratorio de cómputo 2", "Laboratorio de redes"],
+          F: ["Aula F-01", "Aula F-02", "Aula F-03"],
+          B: ["Sala de lectura", "Área de consulta", "Sala de cómputo"],
+          H: ["Comedor", "Área de mesas", "Área de servicio"],
+        };
+        const espacio = await q(
           c,
           "INSERT INTO espacio(edificio_id,clave,nombre,mapa_x,mapa_y) VALUES(?,?,?,?,?)",
           [
-            b.insertId,
-            key + "-" + String(j).padStart(2, "0"),
-            (key === "T" ? "Laboratorio " : "Espacio ") + j,
+            b.insertId, key + "-" + String(j).padStart(2, "0"),
+            nombres[key][j - 1],
             { T: 0.8, F: 0.57, B: 0.76, H: 0.445 }[key],
             { T: 0.39, F: 0.53, B: 0.525, H: 0.525 }[key],
           ],
         );
+        await q(
+          c,
+          "INSERT INTO codigo_qr(espacio_id,version,token,emitido_por,emitido_en) VALUES(?,1,?,1,UTC_TIMESTAMP(6))",
+          [espacio.insertId, randomBytes(32).toString("hex")],
+        );
+      }
     }
     const states = [
       "Pendiente",
