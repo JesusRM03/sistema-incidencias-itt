@@ -1,3 +1,4 @@
+import { ampliarCatalogo } from "./ampliar-catalogo.js";
 import argon2 from "argon2";
 import { randomBytes } from "node:crypto";
 import { pool, query as q, transaction as tx } from "../server/db.js";
@@ -81,6 +82,7 @@ async function seed(c) {
     process.argv.includes("--if-empty") &&
     (await q(c, "SELECT 1 FROM usuario LIMIT 1")).length
   ) {
+    await ampliarCatalogo(c);
     console.log("La demo ya tiene cuentas. Se conserva el contenido.");
     return false;
   }
@@ -277,13 +279,14 @@ async function seed(c) {
         when(1),
       );
   }
+  await ampliarCatalogo(c);
   return true;
 }
 try {
   const created = await tx(seed, "siembra:incidencias_itt_demo");
   if (created)
     console.log(
-      "Demo preparada: seis cuentas ficticias, doce espacios con QR y doce folios en seis estados.",
+      "Demo preparada: seis cuentas ficticias, veinticuatro espacios con QR y doce folios en seis estados.",
     );
 } finally {
   await pool.end();

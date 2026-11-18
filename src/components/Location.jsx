@@ -13,21 +13,31 @@ export function LocationPicker({
   mapOpen = false,
 }) {
   const [building, setBuilding] = useState(""),
-    [point, setPoint] = useState("");
+    roomPanel = useRef(null);
   const spaces =
     catalogs?.espacio.filter(
       (e) =>
         catalogs.edificio.some((b) => b.id === e.edificio_id && b.activo) &&
         e.activo,
     ) || [];
-  const markers = new Map();
-  for (const room of spaces) {
-    if (room.mapa_x == null || room.mapa_y == null) continue;
-    const position = room.mapa_x + "/" + room.mapa_y;
-    if (!markers.has(position)) markers.set(position, []);
-    markers.get(position).push(room);
-  }
   const selected = spaces.find((e) => String(e.id) === String(space));
+  const activeId = String(selected?.edificio_id || building);
+  const activeBuilding = catalogs?.edificio.find((b) => String(b.id) === activeId);
+  const rooms = spaces.filter((r) => String(r.edificio_id) === activeId);
+  const pins = new Map();
+  for (const building of catalogs?.edificio || []) {
+    const room = spaces.find((r) => r.edificio_id === building.id && r.mapa_x != null && r.mapa_y != null);
+    if (!room) continue;
+    const position = room.mapa_x + "/" + room.mapa_y;
+    if (!pins.has(position)) pins.set(position, { room, buildings: [] });
+    pins.get(position).buildings.push(building);
+  }
+  const [shared, setShared] = useState("");
+  function chooseBuilding(id) {
+    setBuilding(String(id));
+    setSpace("");
+    setShared("");
+  }
   return (
     <>
       {catalogs?.demostracion && (
@@ -38,8 +48,7 @@ export function LocationPicker({
           label="Edificio"
           value={selected?.edificio_id || building}
           onChange={(e) => {
-            setBuilding(e.target.value);
-            setSpace("");
+            chooseBuilding(e.target.value);
           }}
         >
           <option value="">Selecciona un edificio</option>
@@ -77,61 +86,29 @@ export function LocationPicker({
             <MapPin size={17} /> Seleccionar en el mapa del campus
           </summary>
           <p className="muted">
-            Elige un marcador. Los espacios sin coordenadas están disponibles en
-            la lista.
+            Toca la clave de un edificio y elige el salón. Las posiciones de la demo son ilustrativas.
           </p>
-          <div className="map-canvas">
-            <img
-              src={map}
-              alt="Mapa de ubicación del Instituto Tecnológico de Toluca"
-            />
-            {[...markers].map(([position, rooms]) => {
-              const room = rooms[0],
-                grouped = rooms.length > 1;
-              const label = grouped
-                ? rooms.map((r) => r.clave).join(", ")
-                : room.clave;
-              return (
-                <button
-                  type="button"
-                  key={position}
-                  className={
-                    "map-pin " +
-                    (rooms.some((r) => r.id === selected?.id) ? "selected" : "")
-                  }
-                  style={{
-                    left: Number(room.mapa_x) * 100 + "%",
-                    top: Number(room.mapa_y) * 100 + "%",
-                  }}
-                  aria-label={"Seleccionar " + label}
-                  onClick={() => {
-                    setPoint(position);
-                    if (!grouped) setSpace(String(room.id));
-                  }}
-                >
-                  <MapPin size={21} />
-                  <span>
-                    {grouped ? rooms.length + " espacios" : room.clave}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="campus-plan">
+            <img src={map} alt="Plano del campus del Tecnológico de Toluca" />
+            {[...pins].map(([position, { room, buildings }]) => (
+              <button type="button" className="campus-pin" key={position}
+                style={{ left: Number(room.mapa_x)*100+"%", top: Number(room.mapa_y)*100+"%" }}
+                aria-label={"Elegir edificio " + buildings.map((b) => b.clave+" · "+b.nombre).join(", ")}
+                aria-pressed={buildings.some((b) => String(b.id) === activeId)}
+                onClick={() => {
+                  if (buildings.length === 1) chooseBuilding(buildings[0].id);
+                  else { chooseBuilding(""); setShared(position); }
+                  requestAnimationFrame(() => roomPanel.current?.focus());
+                }}>{buildings.map((b) => b.clave).join(" / ")}</button>
+            ))}
           </div>
-          {(markers.get(point)?.length || 0) > 1 && (
-            <div className="map-options">
-              <p>Elige el espacio de este punto del mapa.</p>
-              {markers.get(point).map((room) => (
-                <button
-                  className="button small"
-                  key={room.id}
-                  type="button"
-                  onClick={() => setSpace(String(room.id))}
-                >
-                  {room.clave} · {room.nombre}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="campus-rooms" ref={roomPanel} tabIndex={-1}>
+            {shared && pins.get(shared)?.buildings.map((b) => <button type="button" className="button small" key={b.id} onClick={() => chooseBuilding(b.id)}>{b.clave} · {b.nombre}</button>)}
+            {activeBuilding && <>
+              <h3>{activeBuilding.clave} · {activeBuilding.nombre}</h3>
+              <div className="room-list">{rooms.map((r) => <button type="button" className="button small" key={r.id} aria-pressed={String(r.id) === String(space)} onClick={() => setSpace(String(r.id))}>{r.clave} · {r.nombre}</button>)}</div>
+            </>}
+          </div>
         </details>
       )}
     </>

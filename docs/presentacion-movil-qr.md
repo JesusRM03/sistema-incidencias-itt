@@ -1,6 +1,6 @@
 # Demostración del jueves 19 de noviembre
 
-Esta guía arranca la aplicación y MySQL 8.4 en la PC de la exposición. Utiliza seis usuarios ficticios y doce ubicaciones de ejemplo. El catálogo oficial requiere validación del Instituto. Cada teléfono usa el navegador y se conecta al mismo servidor que la computadora.
+Esta guía arranca la aplicación y MySQL 8.4 en la PC de la exposición. Utiliza seis usuarios ficticios y veinticuatro ubicaciones de ejemplo. El catálogo oficial requiere validación del Instituto. Cada teléfono usa el navegador y se conecta al mismo servidor que la computadora.
 
 ## Entrar ahora desde el teléfono
 
@@ -74,7 +74,9 @@ En tu PC, `notepad .env.demo` muestra una contraseña aleatoria diferente por cu
 | Docente reportante | docente@toluca.tecnm.mx | DEMO_PASSWORD_DOCENTE |
 | Otro reportante | otro@toluca.tecnm.mx | DEMO_PASSWORD_OTRO |
 
-La siembra crea cuatro edificios, tres espacios por edificio, doce QR y doce incidencias repartidas entre seis estados. Cada folio de muestra incluye los eventos que le corresponden. Un folio creado durante la exposición recibe su propio identificador. La cuenta de la API tiene permisos por tabla y solo puede consultar y agregar eventos y auditorías.
+La siembra crea siete edificios, veinticuatro espacios con sus respectivos QR y doce incidencias repartidas entre seis estados. Cada folio de muestra incluye los eventos que le corresponden. Un folio creado durante la exposición recibe su propio identificador. La cuenta de la API tiene permisos por tabla y solo puede consultar y agregar eventos y auditorías.
+
+En **Mapa del campus**, toca la clave del edificio sobre el plano, escoge su salón y pulsa **Reportar aquí**. En el formulario puedes seleccionar la categoría por su dibujo. El selector de paleta guarda el tema Normal, Oscuro o Bosque en ese navegador.
 
 ## 4. Etiquetas QR
 

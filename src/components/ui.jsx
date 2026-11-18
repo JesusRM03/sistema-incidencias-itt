@@ -1,3 +1,4 @@
+import { FaultIcon } from "./FaultIcon.jsx";
 import { useId } from "react";
 import { Link } from "react-router-dom";
 import { ClipboardList, ArrowUpRight, AlertCircle } from "lucide-react";
@@ -130,6 +131,7 @@ export function IncidentTable({ rows }) {
                 <Link className="folio" to={"/incidencias/" + i.id}>
                   {i.folio}
                 </Link>
+                <small className="fault-label"><FaultIcon name={i.tipo} />{i.tipo}</small>
                 <span className="table-description">{i.descripcion}</span>
               </td>
               <td>

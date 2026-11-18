@@ -346,9 +346,17 @@ test("Mapa con salones superpuestos, menú por teclado y borrador al volver de u
     await expect(page.getByRole("navigation")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(button(page, "Abrir menú")).toBeFocused();
+    const theme = page.getByLabel("Tema de la página");
+    await theme.selectOption("oscuro");
+    await page.reload();
+    await expect(theme).toHaveValue("oscuro");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "oscuro");
+    await theme.selectOption("bosque");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "bosque");
+    await theme.selectOption("normal");
     await menu(page, "Mapa del campus");
     await page
-      .getByRole("button", { name: /Seleccionar T-01, T-02, T-03/ })
+      .getByRole("button", { name: /Elegir edificio T ·/ })
       .click();
     await button(page, "T-02 · Laboratorio de cómputo 2").click();
     await page.getByRole("link", { name: "Reportar aquí" }).click();
