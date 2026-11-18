@@ -24,8 +24,14 @@ jobs:
           for n in {1..60}; do dc exec -T https test -f /data/caddy/pki/authorities/local/root.crt && break; sleep 2; done
           dc cp https:/data/caddy/pki/authorities/local/root.crt /tmp/itt-demo.crt
           curl --retry 20 --retry-connrefused --retry-delay 2 --cacert /tmp/itt-demo.crt -fsS https://localhost:8443/api/salud
-          dc exec -T app node --input-type=module -e 'import {pool,query} from "./server/db.js"; console.log(await query(pool,"SELECT COUNT(*) AS espacios FROM espacio")); await pool.end()'
+          dc exec -T app node --input-type=module -e 'import assert from "node:assert/strict"; import {pool,query} from "./server/db.js"; const [r]=await query(pool,"SELECT COUNT(*) AS espacios FROM espacio"); assert.equal(r.espacios,12); await pool.end()'
       - name: Reiniciar exclusivamente los datos de la demo
         run: |
           printf 'REINICIAR itt-demo\n' | npm run demo:reset
           curl --retry 20 --retry-all-errors --retry-delay 2 --cacert /tmp/itt-demo.crt -fsS https://localhost:8443/api/salud
+      - name: Diagnóstico de arranque sin credenciales
+        if: failure()
+        run: |
+          dc() { docker compose -p itt-demo --env-file .env.demo -f compose.demo.yaml "$@"; }
+          dc ps -a
+          dc logs --no-color seed | grep -E 'Error:|HttpError:|code:|errno:|sqlState:|Node.js v' | cut -c 1-250 || true

@@ -14,7 +14,7 @@ services:
     volumes:
       - database:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "--protocol=tcp", "-h", "127.0.0.1"]
+      test: ["CMD-SHELL", 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql --protocol=tcp -h 127.0.0.1 -u "$${MYSQL_USER}" "$${MYSQL_DATABASE}" -Nse "SELECT id FROM rol WHERE id=3" | grep -qx 3']
       interval: 3s
       timeout: 3s
       retries: 60

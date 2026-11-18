@@ -37,7 +37,7 @@ La impresión se comprobó hasta la selección de las etiquetas que recibe el di
 
 ## Cotejo con el diccionario de datos
 
-Se compararon las tablas y la secuencia de campos del diccionario del PDF con `server/schema.sql` y la base inicializada. Coincidieron los nombres y el orden de **142 campos en 19 tablas**. MySQL informó 19 tablas InnoDB, 19 claves primarias, 29 restricciones de clave foránea, 20 restricciones únicas, 3 comprobaciones CHECK y 65 índices distintos contando primarios y únicos. La intervención, el evento de incidencia, la solicitud idempotente y la auditoría siguen siendo tablas separadas. La cuenta de la API puede agregar historial y auditorías, sin privilegios de eliminación. Para validar un inventario oficial se necesitan los datos autorizados del Instituto.
+Se compararon las tablas y la secuencia de campos del diccionario del PDF con `server/schema.sql` y la base inicializada. Coincidieron los nombres y el orden de **142 campos en 19 tablas**. MySQL informó 19 tablas InnoDB, 19 claves primarias, 29 restricciones de clave foránea, 20 restricciones únicas, 3 comprobaciones CHECK y 65 índices distintos contando primarios y únicos. La intervención, el evento de incidencia, la solicitud idempotente y la auditoría siguen siendo tablas separadas. La inicialización declara utf8mb4 antes de cargar el SQL en la imagen oficial de MySQL. La cuenta de la API puede agregar historial y auditorías, sin privilegios de eliminación. Para validar un inventario oficial se necesitan los datos autorizados del Instituto.
 
 ## Cambios por archivo o grupo
 
