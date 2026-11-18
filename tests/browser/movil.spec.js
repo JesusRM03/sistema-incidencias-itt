@@ -422,6 +422,10 @@ test("Inicio por rol, tarjeta móvil, filtros y regreso a la posición anterior"
   await login(page,"admin");
   await page.getByRole("link",{name:/Pendientes de asignar/}).click();
   await expect(page.getByLabel("Estado",{exact:true})).toHaveValue("Pendiente");
+  const filtersButton = page.getByRole("button", {name:/Buscar y filtrar/});
+  await filtersButton.click();
+  await expect(page.getByLabel("Estado",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:/Ocultar filtros/}).click();
   const card = page.locator(".incident-card").last();
   await expect(card).toBeVisible();
   await card.scrollIntoViewIfNeeded();
