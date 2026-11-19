@@ -196,3 +196,35 @@ test("Accesibilidad de acceso, registro y consulta", async ({ page }) => {
     ),
   ).toEqual([]);
 });
+
+test("Reportes muestra la falla más frecuente por año, semestre y mes", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await login(page);
+  await page.goto("/reportes");
+
+  const year = page.getByLabel("Año de análisis");
+  const interval = page.getByLabel("Intervalo");
+  const apply = page.getByRole("button", { name: "Aplicar periodo" });
+  const ranking = page.locator(".reports-stats .stat").filter({ hasText: "Tipo de falla más frecuente" });
+  const months = page.locator(".chart-panel").filter({ hasText: "Reportes por mes" }).locator(".bar-row");
+
+  await year.selectOption("2024");
+  await apply.click();
+  await expect(page.getByLabel("Desde", { exact: true })).toHaveValue("2024-01-01");
+  await expect(months).toHaveCount(12);
+
+  await interval.selectOption("2");
+  await apply.click();
+  await expect(page.getByLabel("Hasta", { exact: true })).toHaveValue("2024-02-29");
+  await expect(months).toHaveCount(1);
+  await expect(ranking).toContainText("Proyector");
+
+  await year.selectOption("2025");
+  await interval.selectOption("second");
+  await apply.click();
+  await expect(months).toHaveCount(6);
+  await expect(ranking).toContainText("Instalación eléctrica");
+  await expect(page.getByRole("link", { name: "Exportar CSV" })).toHaveAttribute(
+    "href", /desde=2025-07-01.*hasta=2025-12-31/,
+  );
+});

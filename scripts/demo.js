@@ -1,3 +1,4 @@
+import { agregarHistoricoDemo } from "./demo-historico.js";
 import { ampliarCatalogo } from "./ampliar-catalogo.js";
 import argon2 from "argon2";
 import { randomBytes } from "node:crypto";
@@ -78,13 +79,15 @@ async function seed(c) {
     throw new Error(
       "La siembra exige ALLOW_DEMO=true y la base exclusiva incidencias_itt_demo.",
     );
+  if (process.argv.includes("--historico"))
+    return { nueva: false, historicas: await agregarHistoricoDemo(c) };
   if (
     process.argv.includes("--if-empty") &&
     (await q(c, "SELECT 1 FROM usuario LIMIT 1")).length
   ) {
     await ampliarCatalogo(c);
     console.log("La demo ya tiene cuentas. Se conserva el contenido.");
-    return false;
+    return { nueva: false, historicas: await agregarHistoricoDemo(c) };
   }
   for (const table of [
     "usuario",
@@ -280,14 +283,17 @@ async function seed(c) {
       );
   }
   await ampliarCatalogo(c);
-  return true;
+  return { nueva: true, historicas: await agregarHistoricoDemo(c) };
 }
 try {
-  const created = await tx(seed, "siembra:incidencias_itt_demo");
-  if (created)
+  const { nueva, historicas } = await tx(seed, "siembra:incidencias_itt_demo");
+  if (nueva)
     console.log(
       "Demo preparada: seis cuentas ficticias, veinticuatro espacios con QR y doce folios en seis estados.",
     );
+  console.log(
+    `Histórico de demostración 2024–2025: ${historicas} folios agregados.`,
+  );
 } finally {
   await pool.end();
 }

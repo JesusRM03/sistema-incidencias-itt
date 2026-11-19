@@ -10,7 +10,7 @@ Aplicación web para registrar, asignar, atender, revisar y cerrar incidencias d
 - Incidencias con folio único, periodo vigente, evidencia JPEG/PNG privada y advertencias de posibles duplicados.
 - Asignación/reasignación, diagnóstico, avances públicos/internos, revisión administrativa independiente y cierre confirmado por el reportante.
 - Inconformidades, cancelación motivada, vinculación de duplicados e historial de responsables y eventos.
-- Notificaciones individuales, reportes filtrados, tiempos medios y CSV protegido contra fórmulas.
+- Notificaciones individuales y reportes por año, semestre o mes, con tendencia mensual, tipos de falla más frecuentes, tiempos medios y exportación CSV.
 - Interfaz institucional responsiva con navegación por rol, foco visible y contraste revisado.
 
 ## Inicio
@@ -31,7 +31,11 @@ Para la exposición en Windows y teléfono utiliza [la guía de demostración HT
 
 La [demostración pública de noviembre](https://incidencias-demostracion.up.railway.app) utiliza el Trial de Railway y los veinticuatro espacios ficticios.
 
-La demo contiene doce espacios ficticios. La base `incidencias_itt_demo` y sus fotografías tienen volúmenes propios. El catálogo institucional requiere datos validados por el ITT.
+La demo contiene veinticuatro espacios ficticios, doce folios para practicar la atención y un histórico ficticio de enero de 2024 a diciembre de 2025. La base `incidencias_itt_demo` y sus fotografías tienen volúmenes propios. El catálogo institucional requiere datos validados por el ITT.
+
+En **Reportes**, elige un año y un intervalo (año completo, semestre o mes) y pulsa **Aplicar periodo**. Puedes combinar las fechas con edificio, tipo de falla y estado. La tarjeta de frecuencia y la gráfica mensual muestran los mismos folios filtrados que el CSV.
+
+`npm run demo:up` agrega el histórico a una demo existente al actualizar su imagen, sin reiniciarla. Para una demo configurada en `.env` fuera de Docker, ejecuta `npm run db:demo -- --historico` con la cuenta de siembra. El comando se puede repetir sin duplicar folios ni renovar las etiquetas QR.
 
 ## Verificación
 
