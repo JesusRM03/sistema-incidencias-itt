@@ -1166,6 +1166,8 @@ tbody tr:hover { background: #F8FAFC; }
   align-items: end;
 }
 .filter-bar .field { margin-bottom: 0; }
+.report-period { border-bottom: 1px solid var(--border-soft); }
+.report-period .button { justify-self: start; }
 
 /* ── Gráficas de barras ── */
 .charts-grid {

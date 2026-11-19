@@ -911,7 +911,9 @@ api.get("/incidencias/coincidencias", async (req, res) =>
     await duplicates(pool, req.query.espacio_id, req.query.tipo_falla_id),
   ),
 );
-const listSelect = `SELECT i.*,e.clave espacio_clave,e.nombre espacio,b.nombre edificio,b.clave edificio_clave,t.nombre tipo,p.nombre periodo,u.nombre reportante,a.tecnico_id,tec.nombre tecnico FROM incidencia i JOIN espacio e ON e.id=i.espacio_id JOIN edificio b ON b.id=e.edificio_id JOIN tipo_falla t ON t.id=i.tipo_falla_id JOIN periodo_escolar p ON p.id=i.periodo_id JOIN usuario u ON u.id=i.reportante_id LEFT JOIN asignacion a ON a.incidencia_id=i.id AND a.fin_en IS NULL LEFT JOIN usuario tec ON tec.id=a.tecnico_id`;
+const listColumns = `i.*,e.clave espacio_clave,e.nombre espacio,b.nombre edificio,b.clave edificio_clave,t.nombre tipo,p.nombre periodo,u.nombre reportante,a.tecnico_id,tec.nombre tecnico`;
+const listFrom = ` FROM incidencia i JOIN espacio e ON e.id=i.espacio_id JOIN edificio b ON b.id=e.edificio_id JOIN tipo_falla t ON t.id=i.tipo_falla_id JOIN periodo_escolar p ON p.id=i.periodo_id JOIN usuario u ON u.id=i.reportante_id LEFT JOIN asignacion a ON a.incidencia_id=i.id AND a.fin_en IS NULL LEFT JOIN usuario tec ON tec.id=a.tecnico_id`;
+const listSelect = "SELECT " + listColumns + listFrom;
 function listWhere(u, params) {
   for (const k of ["desde", "hasta"])
     if (params[k])
@@ -1535,7 +1537,9 @@ api.get(["/reportes", "/reportes.csv"], admin, async (req, res) => {
   const w = listWhere(req.user, req.query),
     rows = await q(
       pool,
-      listSelect + w.sql + " ORDER BY i.creada_en DESC,i.id DESC",
+      "SELECT " + listColumns +
+        ",DATE_FORMAT(CONVERT_TZ(i.creada_en,'+00:00','-06:00'),'%Y-%m') mes_registro" +
+        listFrom + w.sql + " ORDER BY i.creada_en DESC,i.id DESC",
       w.args,
     );
   const columns = [
@@ -1601,7 +1605,8 @@ api.get(["/reportes", "/reportes.csv"], admin, async (req, res) => {
     total: rows.length,
     tiempoMedioHoras: meanHours(rows),
     porEstado: group("estado"),
-    porTipo: group("tipo"),
+    porTipo: group("tipo").sort((a, b) => b.total - a.total || a.nombre.localeCompare(b.nombre, "es")),
+    porMes: group("mes_registro").sort((a, b) => a.nombre.localeCompare(b.nombre)),
     porEdificio: group("edificio"),
     porPeriodo: group("periodo"),
     porEspacio: group("espacio"),

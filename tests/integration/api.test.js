@@ -685,3 +685,22 @@ test("La bandeja ordena globalmente por prioridad y después por antigüedad", a
   assert.deepEqual(prioritized.items, listAll.toSorted(byPriority).slice(0, 20));
   assert.deepEqual(oldest.items, listAll.toSorted(byAge).slice(0, 20));
 });
+
+test("El histórico cambia de tipo predominante al pasar de semestre o año", async () => {
+  const cases = [
+    ["2024-01-01", "2024-06-30", "Proyector", 6],
+    ["2024-07-01", "2024-12-31", "Mobiliario", 6],
+    ["2025-01-01", "2025-06-30", "Red o conectividad", 6],
+    ["2025-07-01", "2025-12-31", "Instalación eléctrica", 6],
+    ["2024-02-01", "2024-02-29", "Proyector", 1],
+  ];
+  for (const [desde, hasta, tipo, meses] of cases) {
+    const { status, data } = await admin.call("/reportes?" + new URLSearchParams({ desde, hasta }));
+    assert.equal(status, 200);
+    assert.equal(data.porTipo[0].nombre, tipo);
+    assert.equal(data.porMes.length, meses);
+    assert.equal(data.porMes.reduce((sum, mes) => sum + mes.total, 0), data.total);
+    assert.deepEqual(data.porMes.map((m) => m.nombre), data.porMes.map((m) => m.nombre).sort());
+    assert.ok(data.items.every((item) => item.folio.startsWith("ITT-HIST-")));
+  }
+});
