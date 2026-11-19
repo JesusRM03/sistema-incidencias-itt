@@ -228,3 +228,20 @@ test("Reportes muestra la falla más frecuente por año, semestre y mes", async 
     "href", /desde=2025-07-01.*hasta=2025-12-31/,
   );
 });
+
+test("El alumno encuentra Cerrar sesión en el menú de escritorio", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await login(page, "alumno");
+  const logout = page.getByRole("button", { name: "Cerrar sesión", exact: true });
+  await expect(logout).toHaveText("Cerrar sesión");
+  await expect(logout).toBeInViewport({ ratio: 1 });
+
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await logout.click();
+  await expect(logout).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await logout.press("Enter");
+  await expect(page.getByRole("button", { name: "Iniciar sesión", exact: true })).toBeVisible();
+  expect((await page.request.get("/api/sesion")).status()).toBe(401);
+});

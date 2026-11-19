@@ -242,8 +242,11 @@ test("Flujo móvil HTTPS desde QR hasta cierre, historial, aviso y descarga CSV"
     expect(csv).toContain(folio);
     expect(csv.trim().split("\r\n")).toHaveLength(2);
     await button(alumno, "Abrir menú").click();
+    const cerrarSesion = button(alumno, "Cerrar sesión");
+    await expect(cerrarSesion).toHaveText("Cerrar sesión");
+    await expect(cerrarSesion).toBeInViewport({ ratio: 1 });
     alumno.once("dialog", (d) => d.accept());
-    await button(alumno, "Cerrar sesión").click();
+    await cerrarSesion.click();
     await expect(
       alumno.getByLabel("Correo institucional", { exact: true }),
     ).toBeVisible();

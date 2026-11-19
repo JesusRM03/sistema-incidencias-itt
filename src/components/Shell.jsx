@@ -91,6 +91,7 @@ export function Shell({ user, onLogout }) {
   ];
   async function logout() {
     if (!window.confirm("¿Quieres cerrar tu sesión?")) return;
+    setLogoutError("");
     try {
       await post("/sesion/cerrar");
       onLogout();
@@ -125,6 +126,13 @@ export function Shell({ user, onLogout }) {
             Cerrar menú
           </button>
         )}
+        <div className="sidebar-session">
+          <button className="sidebar-logout" type="button" onClick={logout}>
+            <LogOut size={18} aria-hidden="true" />
+            Cerrar sesión
+          </button>
+          <ErrorBox message={logoutError} />
+        </div>
         <p className="nav-label">ESPACIO DE TRABAJO</p>
         <nav aria-label="Navegación principal">
           {links.map(([url, label, Icon]) => (
@@ -155,15 +163,7 @@ export function Shell({ user, onLogout }) {
               <strong>{user.nombre}</strong>
               <small>{user.rol}</small>
             </div>
-            <button
-              className="icon-button"
-              aria-label="Cerrar sesión"
-              onClick={logout}
-            >
-              <LogOut size={18} />
-            </button>
           </div>
-          <ErrorBox message={logoutError} />
         </div>
       </aside>
       {menu && (
